@@ -1,8 +1,14 @@
-import { PartialType, PickType } from '@nestjs/mapped-types';
-import { CreateAuthenticationDto } from './register.dto.js';
+import { IsEmail, IsString, MinLength } from 'class-validator';
+import { PartialType } from '@nestjs/mapped-types';
+import { RegisterDto } from './register.dto.js';
 
-export class LoginDto extends PartialType(
-  PickType(CreateAuthenticationDto, ['email', 'password'] as const),
-) {}
+export class LoginDto {
+  @IsEmail({}, { message: 'Invalid email address' })
+  email!: string;
 
-export class UpdateAuthenticationDto extends PartialType(CreateAuthenticationDto) {}
+  @IsString()
+  @MinLength(1, { message: 'Password is required' })
+  password!: string;
+}
+
+export class UpdateAuthenticationDto extends PartialType(RegisterDto) {}

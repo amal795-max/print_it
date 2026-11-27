@@ -4,12 +4,15 @@ import {
   Entity,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { UserRole } from '../roles/user-role.enum.js';
+import { UserRole } from './roles/user-role.enum.js';
 
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
+
+  @Column()
+  fullName!: string;
 
   @Column({ unique: true })
   email!: string;

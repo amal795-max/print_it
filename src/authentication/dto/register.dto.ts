@@ -1,35 +1,34 @@
 import {
   IsEmail,
-  IsPhoneNumber,
+  IsEnum,
   IsString,
-  Validate,
-  ValidationArguments,
-  ValidatorConstraint,
-  ValidatorConstraintInterface,
+  Matches,
+  MinLength,
 } from 'class-validator';
+import { UserRole } from '../roles/user-role.enum.js';
 
-interface PasswordFields {
-  password: string;
-}
+const PASSWORD_PATTERN =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
-@ValidatorConstraint({ name: 'passwordsMatch' })
-class PasswordsMatchConstraint implements ValidatorConstraintInterface {
-  validate(value: string, args: ValidationArguments): boolean {
-    return value === (args.object as PasswordFields).password;
-  }
-}
+export class RegisterDto {
+  @IsString()
+  @MinLength(2, { message: 'Full name must be at least 2 characters' })
+  fullName!: string;
 
-export class CreateAuthenticationDto {
-  @IsEmail()
+  @IsEmail({}, { message: 'Invalid email address' })
   email!: string;
 
-  @IsPhoneNumber()
-  phoneNumber!: string;
+  @IsString()
+  @MinLength(3, { message: 'Phone must be at least 3 characters' })
+  phone!: string;
 
   @IsString()
+  @Matches(PASSWORD_PATTERN, {
+    message:
+      'Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character',
+  })
   password!: string;
 
-  @IsString()
-  @Validate(PasswordsMatchConstraint)
-  confirmPassword!: string;
+  @IsEnum(UserRole, { message: 'Role must be CUSTOMER or ADMIN' })
+  role!: UserRole;
 }

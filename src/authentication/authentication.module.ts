@@ -1,14 +1,17 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthenticationService } from './authentication.service.js';
+import { AdminController } from './admin.controller.js';
 import { AuthenticationController } from './authentication.controller.js';
-import { User } from './entities/user.entity.js';
+import { AuthenticationService } from './authentication.service.js';
+import { AuthGuard } from './guards/auth.guard.js';
 import { RolesGuard } from './roles/roles.guard.js';
+import { User } from './user.entity.js';
+import { UsersService } from './users.service.js';
 
 @Module({
   imports: [TypeOrmModule.forFeature([User])],
-  controllers: [AuthenticationController],
-  providers: [AuthenticationService, RolesGuard],
-  exports: [RolesGuard],
+  controllers: [AuthenticationController, AdminController],
+  providers: [AuthenticationService, UsersService, AuthGuard, RolesGuard],
+  exports: [AuthenticationService, UsersService, AuthGuard, RolesGuard],
 })
 export class AuthenticationModule {}

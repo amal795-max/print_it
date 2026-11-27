@@ -1,34 +1,56 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
+import type { Request, Response } from 'express';
+import { CurrentUser } from '../common/decorators/current-user.decorator.js';
+import type { SessionUser } from '../common/interfaces/session.interface.js';
 import { AuthenticationService } from './authentication.service.js';
-import { CreateAuthenticationDto } from './dto/register.dto.js';
-import { UpdateAuthenticationDto } from './dto/login.dto.js';
+import { LoginDto } from './dto/login.dto.js';
+import { RegisterDto } from './dto/register.dto.js';
+import { AuthGuard } from './guards/auth.guard.js';
 
-@Controller('authentication')
+@Controller('auth')
 export class AuthenticationController {
   constructor(private readonly authenticationService: AuthenticationService) {}
 
-  @Post()
-  create(@Body() createAuthenticationDto: CreateAuthenticationDto) {
-    return this.authenticationService.create(createAuthenticationDto);
+  @Post('register')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @HttpCode(HttpStatus.CREATED)
+  register(@Body() dto: RegisterDto) {
+    return this.authenticationService.register(dto);
   }
 
-  @Get()
-  findAll() {
-    return this.authenticationService.findAll();
+  @Post('login')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @HttpCode(HttpStatus.OK)
+  login(@Body() dto: LoginDto, @Req() request: Request) {
+    return this.authenticationService.login(dto, request);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.authenticationService.findOne(+id);
+  @Post('logout')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async logout(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<{ message: string }> {
+    await this.authenticationService.logout(request);
+    response.clearCookie(process.env.SESSION_NAME ?? 'sid');
+    return { message: 'Logged out successfully' };
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAuthenticationDto: UpdateAuthenticationDto) {
-    return this.authenticationService.update(+id, updateAuthenticationDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.authenticationService.remove(+id);
+  @Get('me')
+  @UseGuards(AuthGuard)
+  me(@CurrentUser() user: SessionUser) {
+    return this.authenticationService.me(user);
   }
 }
