@@ -8,7 +8,7 @@ export function databaseConfig( config: ConfigService,): TypeOrmModuleOptions {
     port: Number(config.get<string>('DB_PORT')),
     username: config.get<string>('DB_USERNAME', 'postgres'),
     password: config.getOrThrow<string>('DB_PASSWORD'),
-    database: config.get<string>('DB_NAME', 'postgres'),
+    database: config.get<string>('DB_NAME', 'print_it_db'),
     autoLoadEntities: true,
     synchronize:false,
   };

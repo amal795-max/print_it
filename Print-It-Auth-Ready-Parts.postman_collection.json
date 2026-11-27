@@ -1,0 +1,310 @@
+{
+  "info": {
+    "_postman_id": "d34b0e88-799f-46a9-9b64-7cc3470b73e1",
+    "name": "Print It - Auth and Ready Parts",
+    "description": "Postman requests converted from the Auth and Catalog (Ready Parts) sections of swagger.yaml. After login, Postman stores the session cookie in its cookie jar and sends it automatically to the same host.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3002/api",
+      "type": "string"
+    },
+    {
+      "key": "email",
+      "value": "customer@example.com",
+      "type": "string"
+    },
+    {
+      "key": "password",
+      "value": "ChangeMe123!",
+      "type": "string"
+    },
+    {
+      "key": "otpCode",
+      "value": "482910",
+      "type": "string"
+    },
+    {
+      "key": "partId",
+      "value": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "type": "string"
+    },
+    {
+      "key": "materialId",
+      "value": "b2b02cee-238a-4f37-9c60-54d8e6d542d1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Test Customer\",\n  \"email\": \"{{email}}\",\n  \"phone\": \"+15555550123\",\n  \"password\": \"{{password}}\",\n  \"role\": \"CUSTOMER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/auth/register",
+            "description": "Creates a customer account and sends an OTP to the registered email."
+          },
+          "response": [
+            {
+              "name": "201 Created - Customer registered",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"user\": {\n    \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n    \"fullName\": \"Test Customer\",\n    \"email\": \"customer@example.com\",\n    \"phone\": \"+15555550123\",\n    \"role\": \"CUSTOMER\",\n    \"isVerified\": false,\n    \"createdAt\": \"2026-11-26T18:45:41.517Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Verify email OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"otpCode\": \"{{otpCode}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/auth/verify-otp"
+          },
+          "response": [
+            {
+              "name": "200 OK - Email verified",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Account activated successfully\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/auth/login",
+            "description": "On success, Postman stores the returned session cookie for subsequent requests to this host."
+          },
+          "response": [
+            {
+              "name": "200 OK - Session created",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Set-Cookie",
+                  "value": "session=<opaque-session-id>; Path=/; HttpOnly; SameSite=Lax"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"user\": {\n    \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n    \"fullName\": \"Test Customer\",\n    \"email\": \"customer@example.com\",\n    \"phone\": \"+15555550123\",\n    \"role\": \"CUSTOMER\",\n    \"isVerified\": true,\n    \"createdAt\": \"2026-11-26T18:45:41.517Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Current user",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/auth/me",
+            "description": "Requires the session cookie created by Login."
+          },
+          "response": [
+            {
+              "name": "200 OK - Current user",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"fullName\": \"Test Customer\",\n  \"email\": \"customer@example.com\",\n  \"phone\": \"+15555550123\",\n  \"role\": \"CUSTOMER\",\n  \"isVerified\": true,\n  \"createdAt\": \"2026-11-26T18:45:41.517Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/auth/logout",
+            "description": "Requires the session cookie; the server should clear it."
+          },
+          "response": [
+            {
+              "name": "204 No Content - Logged out",
+              "status": "No Content",
+              "code": 204,
+              "_postman_previewlanguage": "Text",
+              "header": [
+                {
+                  "key": "Set-Cookie",
+                  "value": "session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0"
+                }
+              ],
+              "cookie": [],
+              "body": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Catalog - Ready Parts",
+      "item": [
+        {
+          "name": "List/search parts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/parts?category=HANDLES&brand=LG&search=handle",
+            "description": "Filter values can be changed or removed from the URL."
+          },
+          "response": [
+            {
+              "name": "200 OK - Parts list",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "[\n  {\n    \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n    \"title\": \"Automatic washing-machine door handle\",\n    \"category\": \"HANDLES\",\n    \"description\": \"Replacement door handle\",\n    \"material\": {\n      \"id\": \"b2b02cee-238a-4f37-9c60-54d8e6d542d1\",\n      \"name\": \"PLA\",\n      \"type\": \"RIGID\",\n      \"pricePerGram\": 0.15\n    },\n    \"color\": \"#000000\",\n    \"availableColors\": [\"#FFFFFF\", \"#000000\"],\n    \"compatibleBrands\": [\"LG\"],\n    \"compatibleModels\": [\"F4J6VY2W\"],\n    \"dimensionsMm\": {\n      \"length\": 65,\n      \"width\": 24,\n      \"height\": 18\n    },\n    \"weightGrams\": 24.5,\n    \"inStock\": true,\n    \"basePrice\": 12.5,\n    \"estimatedDays\": 3,\n    \"previewImages\": [\"https://example.com/part-preview.png\"],\n    \"model3dUrl\": \"https://example.com/part-model.stl\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Create part (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{partId}}\",\n  \"title\": \"Automatic washing-machine door handle\",\n  \"category\": \"HANDLES\",\n  \"description\": \"Replacement door handle\",\n  \"material\": {\n    \"id\": \"{{materialId}}\",\n    \"name\": \"PLA\",\n    \"type\": \"RIGID\",\n    \"pricePerGram\": 0.15\n  },\n  \"color\": \"#000000\",\n  \"availableColors\": [\"#FFFFFF\", \"#000000\"],\n  \"compatibleBrands\": [\"LG\"],\n  \"compatibleModels\": [\"F4J6VY2W\"],\n  \"dimensionsMm\": {\n    \"length\": 65,\n    \"width\": 24,\n    \"height\": 18\n  },\n  \"weightGrams\": 24.5,\n  \"inStock\": true,\n  \"basePrice\": 12.5,\n  \"estimatedDays\": 3,\n  \"previewImages\": [\"https://example.com/part-preview.png\"],\n  \"model3dUrl\": \"https://example.com/part-model.stl\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/parts",
+            "description": "Requires an Admin session."
+          },
+          "response": [
+            {
+              "name": "201 Created - Part added",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"title\": \"Automatic washing-machine door handle\",\n  \"category\": \"HANDLES\",\n  \"description\": \"Replacement door handle\",\n  \"material\": {\n    \"id\": \"b2b02cee-238a-4f37-9c60-54d8e6d542d1\",\n    \"name\": \"PLA\",\n    \"type\": \"RIGID\",\n    \"pricePerGram\": 0.15\n  },\n  \"color\": \"#000000\",\n  \"availableColors\": [\"#FFFFFF\", \"#000000\"],\n  \"compatibleBrands\": [\"LG\"],\n  \"compatibleModels\": [\"F4J6VY2W\"],\n  \"dimensionsMm\": {\n    \"length\": 65,\n    \"width\": 24,\n    \"height\": 18\n  },\n  \"weightGrams\": 24.5,\n  \"inStock\": true,\n  \"basePrice\": 12.5,\n  \"estimatedDays\": 3,\n  \"previewImages\": [\"https://example.com/part-preview.png\"],\n  \"model3dUrl\": \"https://example.com/part-model.stl\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get part details and price",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/parts/{{partId}}?materialId={{materialId}}&quantity=1"
+          },
+          "response": [
+            {
+              "name": "200 OK - Part details and price",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"title\": \"Automatic washing-machine door handle\",\n  \"category\": \"HANDLES\",\n  \"description\": \"Replacement door handle\",\n  \"material\": {\n    \"id\": \"b2b02cee-238a-4f37-9c60-54d8e6d542d1\",\n    \"name\": \"PLA\",\n    \"type\": \"RIGID\",\n    \"pricePerGram\": 0.15\n  },\n  \"color\": \"#000000\",\n  \"availableColors\": [\"#FFFFFF\", \"#000000\"],\n  \"compatibleBrands\": [\"LG\"],\n  \"compatibleModels\": [\"F4J6VY2W\"],\n  \"dimensionsMm\": {\n    \"length\": 65,\n    \"width\": 24,\n    \"height\": 18\n  },\n  \"weightGrams\": 24.5,\n  \"inStock\": true,\n  \"basePrice\": 12.5,\n  \"estimatedDays\": 3,\n  \"previewImages\": [\"https://example.com/part-preview.png\"],\n  \"model3dUrl\": \"https://example.com/part-model.stl\"\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
