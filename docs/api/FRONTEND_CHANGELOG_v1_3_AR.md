@@ -18,6 +18,7 @@
 | `/orders/{id}/status-history` | **محذوف** | استخدام `Order.status` الحالية فقط |
 | لا يوجد Reorder | `sourceRequestId` اختياري في POST `/custom-requests` | يمكن تعبئة فورم من طلب سابق، ونسخ صور بعد التحقق من ملكيته وحالة Order الأصلية `DELIVERED` أو `CANCELLED` |
 | Admin Quote بدون تكلفة داخلية | `estimatedCost` اختياري في Admin Quote | **لا يظهر للعميل**؛ تكلفة الطلب المخصص كاملًا |
+| عنوان التوصيل القديم: `fullName`, `region`, `street`, `postalCode`, `deliveryNotes` | `recipientName`, `phone`, `city`, `details`, و`latitude`/`longitude` اختيارية معًا | العنوان المبسط يُرسل عند Checkout أو قبول Quote؛ لا ترسل الحقول القديمة، ولا `district` |
 
 ## الفلوهات المتفق عليها
 
@@ -28,6 +29,30 @@
 **Status واحد لكل Order**؛ لا شحن جزئي. جميع القطع الجاهزة يمكن أن تقفز من `CONFIRMED` إلى `READY_FOR_DELIVERY`، أما الطلب الذي يحتاج تصنيعاً فيمر عبر `IN_PROGRESS`.
 
 **مرفقات:** JPEG/PNG/WebP، بحد 5 صور، كل صورة حتى 10,485,760 بايت (10 MiB). حقول `removeAttachmentIds` مكررة بنفس الاسم ضمن multipart؛ `measurementsJson` نص JSON.
+
+## عنوان التوصيل النهائي
+
+يُستخدم **نفس** `ShippingAddress` / `Address` object في `POST /orders` (Catalog Checkout) وعند قبول Quote. العميل يكتب الاسم ورقم الهاتف والمدينة والتفاصيل، ويستطيع اختيار نقطة على الخريطة **اختياريًا**. لا يكتب الإحداثيات يدويًا.
+
+```json
+{
+  "shippingAddress": {
+    "recipientName": "أحمد محمد",
+    "phone": "09xxxxxxxx",
+    "city": "دمشق",
+    "details": "المزة، شارع كذا، بناء 12، الطابق الثاني",
+    "latitude": 33.503,
+    "longitude": 36.25
+  }
+}
+```
+
+- المطلوب: `recipientName`, `phone`, `city`, `details`.
+- `latitude` و`longitude`: يا **الاثنين مع بعض**، يا **الاتنين محذوفين** من الـJSON. لا ترسل واحدة لحالها أو `null`.
+- مدى الإحداثيات: latitude من `-90` إلى `90`، وlongitude من `-180` إلى `180`.
+- `details` تجمع الحي والشارع والبناء والطابق؛ **لا يوجد** `district` أو `street` مستقل.
+- بيانات العنوان Snapshot في `orders.shipping_address JSONB`. لا يتغير `shippingFee` بسبب موقع الدبوس.
+- عدم توفر الخريطة **لا يمنع إتمام الطلب** ما دام العنوان النصّي مكتملًا.
 
 ## تمثيل المبالغ
 
