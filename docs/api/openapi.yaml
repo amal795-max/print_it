@@ -1,45 +1,42 @@
 openapi: 3.0.3
 info:
   title: Print It API
-  version: 1.2.0
-  description: 'Print It — B2C Arabic-only web MVP. Contract aligned with teammate Auth Postman: register(fullName,email,phone,password),
-    email OTP verify, session cookie, role assigned server-side. REST-style resource URLs, URI versioning via /api/v1. SYP
-    only: NEW Syrian pound, 100 qirsh = 1 SYP; all monetary *Minor fields are integer qirsh, server calculated; do not reuse
-    old USD sample prices. Arabic user-facing content and error.message; English API property names/enums/material codes remain
-    stable. Browser-only cart, products+variants, one quote per request, customer request NEEDS_INFO flow, order item reviews,
-    mock payment. \nAuth endpoints: GET /auth/csrf-token first, POST /auth/register, POST /auth/verify-otp, POST /auth/resend-otp
-    (planned, requires Auth implementation), POST /auth/login, GET /auth/me, POST /auth/logout. CSRF tokens must refresh after
-    login; configure Secure/SameSite/CORS per deployment. This is a proposed API contract, not proof that backend endpoints
-    are implemented.
-
-
-    Contract v1.2: hybrid catalog inventory (IN_STOCK / MADE_TO_ORDER), computed starting price, internal cost estimates,
-    and concurrency-safe mock payment. API URL stays /api/v1. All client-facing monetary amounts are minor SYP units.'
+  version: 1.3.0
+  description: 'Print It — B2C Arabic-first web MVP. API base remains /api/v1 (this file version is the contract
+    revision). Server-side sessions + email OTP (implementation of CSRF, cookie name and resend OTP must be verified
+    with Auth teammate). Catalog offers IN_STOCK or MADE_TO_ORDER variants, browser-side cart, server-priced orders,
+    atomic stock deduction on successful mock payment. One quote per custom request, valid 7 days; quote includes
+    design/manufacturing in a SINGLE unit price and excludes delivery. Fixed delivery fee is added to Order once
+    when created; never supplied by client. All customer-facing money is a decimal STRING such as "150.00" denominated
+    in SYP (new Syrian pound); PostgreSQL NUMERIC(12,2). No customer-entered money, no order status history, one
+    review per Order Item. Custom reorder: a new SUBMITTED custom request may reference sourceRequestId from a DELIVERED
+    or CANCELLED custom order; never reuse an old quote. API contract only, not a claim that every route is implemented.
+    Breaking change from v1.2 — coordinate before merging.'
   contact:
     name: Print It Backend Team
 servers:
-  - url: http://localhost:3000/api/v1
-    description: Local NestJS API, URI versioning
+- url: http://localhost:3000/api/v1
+  description: Local NestJS API, URI versioning
 tags:
-  - name: Auth
-  - name: Catalog
-  - name: Custom Requests
-  - name: Quotes
-  - name: Orders
-  - name: Payments
-  - name: Reviews
-  - name: Admin - Catalog
-  - name: Admin - Requests
-  - name: Admin - Orders
+- name: Auth
+- name: Catalog
+- name: Custom Requests
+- name: Quotes
+- name: Orders
+- name: Payments
+- name: Reviews
+- name: Admin - Catalog
+- name: Admin - Requests
+- name: Admin - Orders
 paths:
   /auth/csrf-token:
     get:
       tags:
-        - Auth
+      - Auth
       summary: Get CSRF token and establish anonymous session
       operationId: getCsrfToken
-      description: Obtain CSRF token bound to (possibly anonymous) server session; required before register, verify OTP,
-        resend OTP, login, and all other unsafe methods. Fetch again after login/session regeneration.
+      description: Obtain CSRF token bound to (possibly anonymous) server session; required before register, verify
+        OTP, resend OTP, login, and all other unsafe methods. Fetch again after login/session regeneration.
       security: []
       responses:
         '200':
@@ -51,15 +48,15 @@ paths:
   /auth/register:
     post:
       tags:
-        - Auth
+      - Auth
       summary: Create customer account
       operationId: register
-      description: 'Public registration: backend assigns CUSTOMER, creates isVerified=false, sends one-time email OTP. Does
-        not create authenticated session. Do not accept role from client. Endpoint URI: /api/v1/auth/register.'
+      description: 'Public registration: backend assigns CUSTOMER, creates isVerified=false, sends one-time email
+        OTP. Does not create authenticated session. Do not accept role from client. Endpoint URI: /api/v1/auth/register.'
       security: []
       parameters:
-        - &id001
-          $ref: '#/components/parameters/CsrfHeader'
+      - &id001
+        $ref: '#/components/parameters/CsrfHeader'
       requestBody:
         required: true
         content:
@@ -94,15 +91,15 @@ paths:
   /auth/verify-otp:
     post:
       tags:
-        - Auth
+      - Auth
       summary: Verify email using one-time OTP
       operationId: verifyEmailOtp
-      description: 'Matches the teammate Auth contract: code sent at registration. Single-use, expires, rate-limited and consumed
-        atomically. Success enables isVerified=true. No session is issued by verification; customer logs in afterward. Endpoint
-        URI: /api/v1/auth/verify-otp.'
+      description: 'Matches the teammate Auth contract: code sent at registration. Single-use, expires, rate-limited
+        and consumed atomically. Success enables isVerified=true. No session is issued by verification; customer
+        logs in afterward. Endpoint URI: /api/v1/auth/verify-otp.'
       security: []
       parameters:
-        - $ref: '#/components/parameters/CsrfHeader'
+      - $ref: '#/components/parameters/CsrfHeader'
       requestBody:
         required: true
         content:
@@ -137,15 +134,15 @@ paths:
   /auth/resend-otp:
     post:
       tags:
-        - Auth
+      - Auth
       summary: Resend email activation OTP
       operationId: resendEmailOtp
-      description: 'Recommended OTP support endpoint for expired/missing email. Always return generic response even for unknown/already
-        verified accounts; apply cooldown and per-email/IP rate limiting. Planned contract: Auth owner must implement before
-        frontend depends on it. Endpoint URI: /api/v1/auth/resend-otp.'
+      description: 'Recommended OTP support endpoint for expired/missing email. Always return generic response even
+        for unknown/already verified accounts; apply cooldown and per-email/IP rate limiting. Planned contract:
+        Auth owner must implement before frontend depends on it. Endpoint URI: /api/v1/auth/resend-otp.'
       security: []
       parameters:
-        - $ref: '#/components/parameters/CsrfHeader'
+      - $ref: '#/components/parameters/CsrfHeader'
       requestBody:
         required: true
         content:
@@ -174,15 +171,15 @@ paths:
   /auth/login:
     post:
       tags:
-        - Auth
+      - Auth
       summary: Authenticate and create session cookie
       operationId: login
-      description: Validate email/password, require verified email, then regenerate session ID and set HttpOnly 
-        SameSite=Lax cookie (Secure in HTTPS). No JWT. CSRF token from anonymous session is invalidated by login; 
+      description: Validate email/password, require verified email, then regenerate session ID and set HttpOnly
+        SameSite=Lax cookie (Secure in HTTPS). No JWT. CSRF token from anonymous session is invalidated by login;
         frontend fetches a fresh token afterward.
       security: []
       parameters:
-        - *id001
+      - *id001
       requestBody:
         required: true
         content:
@@ -223,11 +220,11 @@ paths:
   /auth/me:
     get:
       tags:
-        - Auth
+      - Auth
       summary: Current authenticated user
       operationId: getMe
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       responses:
         '200':
           description: OK
@@ -241,17 +238,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiError'
+      description: ''
   /auth/logout:
     post:
       tags:
-        - Auth
+      - Auth
       summary: Destroy current session
       operationId: logout
       description: Destroy server session and clear cookie; frontend must forget cached CSRF token.
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id001
+      - *id001
       responses:
         '204':
           description: No content
@@ -264,7 +262,7 @@ paths:
   /categories:
     get:
       tags:
-        - Catalog
+      - Catalog
       summary: List active categories
       operationId: listCategories
       security: []
@@ -275,28 +273,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CategoryList'
+      description: ''
   /products:
     get:
       tags:
-        - Catalog
+      - Catalog
       summary: List active products with variants
       operationId: listProducts
       security: []
       parameters:
-        - &id002
-          $ref: '#/components/parameters/Page'
-        - &id003
-          $ref: '#/components/parameters/Limit'
-        - name: categoryId
-          in: query
-          schema:
-            type: string
-            format: uuid
-        - name: search
-          in: query
-          schema:
-            type: string
-            maxLength: 120
+      - &id002
+        $ref: '#/components/parameters/Page'
+      - &id003
+        $ref: '#/components/parameters/Limit'
+      - name: categoryId
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: search
+        in: query
+        schema:
+          type: string
+          maxLength: 120
       responses:
         '200':
           description: OK
@@ -310,21 +309,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiError'
+      description: ''
   /products/{id}:
     get:
       tags:
-        - Catalog
+      - Catalog
       summary: Get published product and variants
       operationId: getProduct
       security: []
       parameters:
-        - &id004
-          name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+      - &id004
+        name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
         '200':
           description: OK
@@ -338,19 +338,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiError'
+      description: ''
   /custom-requests:
     post:
       tags:
-        - Custom Requests
+      - Custom Requests
       summary: Create and submit custom request with photos
       operationId: createCustomRequest
-      description: Creates SUBMITTED immediately (no DRAFT); 1–5 photos, each <=10 MB, at least one retained at all 
-        times. measurementsJson is a JSON string. Customer ID comes from session. Atomic DB insert + safe storage 
-        cleanup on failure.
+      description: Create SUBMITTED directly (no DRAFT). For normal creation upload 1–5 photos, each <=10,485,760
+        bytes. For Reorder, sourceRequestId must point to a custom request from a DELIVERED or CANCELLED CUSTOM
+        order owned by the same customer. Server reuses/copies prior photos (1–5 combined), creates a NEW request
+        and later a NEW quote. Customer can change title/description/quantity/measurements before submission; old
+        quote never reused. Multipart measurementsJson is JSON string.
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id001
+      - *id001
       requestBody:
         required: true
         content:
@@ -359,7 +362,8 @@ paths:
               $ref: '#/components/schemas/CreateCustomMultipart'
             encoding:
               photos:
-                contentType: image/jpeg, image/png, image/webp
+                style: form
+                explode: true
       responses:
         '201':
           description: Created
@@ -393,14 +397,14 @@ paths:
                 $ref: '#/components/schemas/ApiError'
     get:
       tags:
-        - Custom Requests
+      - Custom Requests
       summary: List my custom requests
       operationId: listMyCustomRequests
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id002
-        - *id003
+      - *id002
+      - *id003
       responses:
         '200':
           description: OK
@@ -420,17 +424,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiError'
+      description: ''
   /custom-requests/{id}:
     get:
       tags:
-        - Custom Requests
+      - Custom Requests
       summary: Get own custom request
       operationId: getMyCustomRequest
       description: Also available to ADMIN under /admin/custom-requests/{id}.
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id004
+      - *id004
       responses:
         '200':
           description: OK
@@ -452,16 +457,17 @@ paths:
                 $ref: '#/components/schemas/ApiError'
     patch:
       tags:
-        - Custom Requests
+      - Custom Requests
       summary: Complete missing information and resubmit
       operationId: resubmitCustomRequest
-      description: 'Only owner from NEEDS_INFO. Updates supplied fields, atomically adds/removes photos, and transitions to
-        SUBMITTED. Non-supplied fields stay unchanged. Total photos after changes: 1–5. No free edits after QUOTED/REJECTED.'
+      description: Owner only, NEEDS_INFO only. Update supplied title, description, quantity, measurementsJson;
+        append photos and remove attachments by repeated removeAttachmentIds fields; server keeps 1–5 JPEG/PNG/WebP
+        images (max 10,485,760 bytes each) and changes status to SUBMITTED atomically.
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id004
-        - *id001
+      - *id004
+      - *id001
       requestBody:
         required: true
         content:
@@ -470,7 +476,11 @@ paths:
               $ref: '#/components/schemas/ResubmitCustomMultipart'
             encoding:
               photos:
-                contentType: image/jpeg, image/png, image/webp
+                style: form
+                explode: true
+              removeAttachmentIds:
+                style: form
+                explode: true
       responses:
         '200':
           description: OK
@@ -517,20 +527,20 @@ paths:
   /custom-requests/{id}/attachments/{attachmentId}/content:
     get:
       tags:
-        - Custom Requests
+      - Custom Requests
       summary: View private request photo
       operationId: getCustomAttachmentContent
       description: Returns a protected image stream. Avoid exposing storage keys or unguarded public URLs.
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id004
-        - name: attachmentId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+      - *id004
+      - name: attachmentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
         '200':
           description: Image bytes; owner or ADMIN only
@@ -562,14 +572,15 @@ paths:
   /quotes/{id}:
     get:
       tags:
-        - Quotes
+      - Quotes
       summary: Read my offer/quotation
       operationId: getQuote
-      description: Effective status is EXPIRED if a SENT quote passed expiresAt even if a background job has not run.
+      description: Effective status is EXPIRED if a SENT quote passed expiresAt even if a background job has not
+        run.
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id004
+      - *id004
       responses:
         '200':
           description: OK
@@ -591,18 +602,18 @@ paths:
                 $ref: '#/components/schemas/ApiError'
     patch:
       tags:
-        - Quotes
+      - Quotes
       summary: Accept or decline a quote
       operationId: decideQuote
-      description: Only request owner. ACCEPTED requires shippingAddress; city must equal the city priced in custom 
-        request. Accept creates exactly one CUSTOM Order with one quote-backed item and PENDING_PAYMENT in one DB 
-        transaction. Repeated ACCEPTED returns the same order; after expiry or DECLINED returns 409. DECLINED closes 
-        quote without an order.
+      description: Only request owner may accept or decline SENT and unexpired quote. ACCEPTED requires shippingAddress,
+        creates ONE custom Order with shipping fee added by server at order creation, and an item with quote.unitPrice
+        × quantity; no repeat purchase. Idempotent repeated ACCEPTED returns same Order. DECLINED produces no order.
+        No city pre-pricing restriction.
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id004
-        - *id001
+      - *id004
+      - *id001
       requestBody:
         required: true
         content:
@@ -643,19 +654,19 @@ paths:
   /orders:
     post:
       tags:
-        - Orders
+      - Orders
       summary: Checkout browser cart and create catalog order
       operationId: createCatalogOrder
-      description: Creates CATALOG Order from unique variantId + quantity using current server prices (no client price 
-        or server cart); validates variant active and orderable. IN_STOCK quantity is checked, not reserved. Calculates 
-        snapshots and fixed SYP shipping fee. On mock payment SUCCESS stock is rechecked and decremented atomically. 
-        Duplicate variantIds return 400, insufficient stock returns 409. Idempotency-Key prevents duplicate orders.
+      description: 'Create a CATALOG order from browser cart: variantId and quantity only. Server applies SYP decimal
+        price snapshots and one FIXED shippingFee to the Order; never accept client prices. IN_STOCK check at checkout
+        does not reserve stock. Stock atomically deducted only during successful mock payment. Duplicate variant
+        IDs or idempotency key mismatch rejected.'
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id001
-        - &id005
-          $ref: '#/components/parameters/IdempotencyKey'
+      - *id001
+      - &id005
+        $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -701,14 +712,14 @@ paths:
                 $ref: '#/components/schemas/ApiError'
     get:
       tags:
-        - Orders
+      - Orders
       summary: List my orders
       operationId: listMyOrders
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id002
-        - *id003
+      - *id002
+      - *id003
       responses:
         '200':
           description: OK
@@ -728,16 +739,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiError'
+      description: ''
   /orders/{id}:
     get:
       tags:
-        - Orders
+      - Orders
       summary: Get my order, items, tracking and review flags
       operationId: getMyOrder
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id004
+      - *id004
       responses:
         '200':
           description: OK
@@ -757,18 +769,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiError'
+      description: ''
     patch:
       tags:
-        - Orders
+      - Orders
       summary: Cancel my unpaid order
       operationId: cancelMyUnpaidOrder
-      description: Only owner and only while PENDING_PAYMENT, before any successful payment. No refunds in v1; payment 
+      description: Only owner and only while PENDING_PAYMENT, before any successful payment. No refunds in v1; payment
         and cancellation race must use transaction/row lock.
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id004
-        - *id001
+      - *id004
+      - *id001
       requestBody:
         required: true
         content:
@@ -806,59 +819,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiError'
-  /orders/{id}/status-history:
-    get:
-      tags:
-        - Orders
-      summary: View order status timeline
-      operationId: getOrderStatusHistory
-      security:
-        - sessionCookie: []
-      parameters:
-        - *id004
-      responses:
-        '200':
-          description: History oldest to newest
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - data
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/OrderStatusHistory'
-        '401':
-          description: Session missing or expired.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '404':
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
   /orders/{id}/payment-attempts:
     post:
       tags:
-        - Payments
+      - Payments
       summary: Run immediate mock payment
       operationId: createPaymentAttempt
-      description: Demo-only immediate payment. A SUCCESS testScenario rechecks stock for every IN_STOCK item and 
-        atomically decrements it (sorted by variant ID), creates the single SUCCEEDED attempt, and confirms the order in
-        one PostgreSQL transaction. If insufficient stock, roll back and return HTTP 409 with error.code=OUT_OF_STOCK; 
-        NO payment attempt or stock change. Simulated FAILURE creates a FAILED attempt (201), leaves stock unchanged and
-        Order PENDING_PAYMENT. Idempotency-Key replay never charges/deducts twice. No external card charge.
+      description: Synchronous simulated payment. For SUCCESS, lock order and check all IN_STOCK items before atomic
+        stock deductions, create single succeeded attempt, and confirm Order in ONE database transaction. If insufficient
+        stock, rollback, return 409 OUT_OF_STOCK and do not create attempt. FAILURE creates FAILED attempt and leaves
+        Order PENDING_PAYMENT. Idempotency-Key replay never changes stock twice. Customer charged no real money.
+        amount equals order.total.
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id004
-        - *id001
-        - *id005
+      - *id004
+      - *id001
+      - *id005
       requestBody:
         required: true
         content:
@@ -897,7 +874,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
         '409':
-          description: Order status conflict OR stock unavailable at payment (error.code=OUT_OF_STOCK); transaction 
+          description: Order status conflict OR stock unavailable at payment (error.code=OUT_OF_STOCK); transaction
             rolls back without a payment attempt.
           content:
             application/json:
@@ -905,13 +882,13 @@ paths:
                 $ref: '#/components/schemas/ApiError'
     get:
       tags:
-        - Payments
+      - Payments
       summary: List my mock payment attempts
       operationId: listPaymentAttempts
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id004
+      - *id004
       responses:
         '200':
           description: OK
@@ -931,19 +908,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiError'
+      description: ''
   /order-items/{id}/reviews:
     post:
       tags:
-        - Reviews
+      - Reviews
       summary: Review purchased order item after delivery
       operationId: createOrderItemReview
       description: Exactly one review per order item (UNIQUE order_item_id). Owner only; owning Order must be DELIVERED.
         Applies to catalog and custom items.
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id004
-        - *id001
+      - *id004
+      - *id001
       requestBody:
         required: true
         content:
@@ -984,16 +962,16 @@ paths:
   /products/{id}/reviews:
     get:
       tags:
-        - Reviews
+      - Reviews
       summary: List item reviews for product
       operationId: getProductReviews
-      description: Public reviews for catalog OrderItems referencing a variant of this product, after delivered orders 
-        only. Do not expose reviewer private data.
+      description: Public reviews for catalog OrderItems referencing a variant of this product, after delivered
+        orders only. Do not expose reviewer private data.
       security: []
       parameters:
-        - *id004
-        - *id002
-        - *id003
+      - *id004
+      - *id002
+      - *id003
       responses:
         '200':
           description: OK
@@ -1016,11 +994,11 @@ paths:
   /admin/categories:
     get:
       tags:
-        - Admin - Catalog
+      - Admin - Catalog
       summary: List all categories including inactive
       operationId: adminListCategories
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       responses:
         '200':
           description: OK
@@ -1043,13 +1021,13 @@ paths:
       description: Requires authenticated ADMIN session.
     post:
       tags:
-        - Admin - Catalog
+      - Admin - Catalog
       summary: Create category
       operationId: adminCreateCategory
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id001
+      - *id001
       requestBody:
         required: true
         content:
@@ -1091,14 +1069,14 @@ paths:
   /admin/categories/{id}:
     patch:
       tags:
-        - Admin - Catalog
+      - Admin - Catalog
       summary: Update/disable category
       operationId: adminPatchCategory
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id004
-        - *id001
+      - *id004
+      - *id001
       requestBody:
         required: true
         content:
@@ -1146,14 +1124,14 @@ paths:
   /admin/products:
     get:
       tags:
-        - Admin - Catalog
+      - Admin - Catalog
       summary: List all products including unpublished
       operationId: adminListProducts
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id002
-        - *id003
+      - *id002
+      - *id003
       responses:
         '200':
           description: OK
@@ -1182,13 +1160,13 @@ paths:
       description: Requires authenticated ADMIN session.
     post:
       tags:
-        - Admin - Catalog
+      - Admin - Catalog
       summary: Create unpublished catalog product
       operationId: adminCreateProduct
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id001
+      - *id001
       requestBody:
         required: true
         content:
@@ -1230,13 +1208,13 @@ paths:
   /admin/products/{id}:
     get:
       tags:
-        - Admin - Catalog
+      - Admin - Catalog
       summary: Read product including unpublished
       operationId: adminGetProduct
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id004
+      - *id004
       responses:
         '200':
           description: OK
@@ -1265,18 +1243,19 @@ paths:
       description: Requires authenticated ADMIN session.
     patch:
       tags:
-        - Admin - Catalog
+      - Admin - Catalog
       summary: Update/publish/disable product
       operationId: adminPatchProduct
-      description: 'Publishing requires >=1 active variant and >=1 image. Existing OrderItem snapshots are never changed.
+      description: 'Publishing requires >=1 active variant and >=1 image. Existing OrderItem snapshots are never
+        changed.
 
 
         Requires authenticated ADMIN session.'
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id004
-        - *id001
+      - *id004
+      - *id001
       requestBody:
         required: true
         content:
@@ -1323,14 +1302,14 @@ paths:
   /admin/products/{id}/variants:
     post:
       tags:
-        - Admin - Catalog
+      - Admin - Catalog
       summary: Create product variant
       operationId: adminCreateVariant
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id004
-        - *id001
+      - *id004
+      - *id001
       requestBody:
         required: true
         content:
@@ -1378,14 +1357,14 @@ paths:
   /admin/variants/{id}:
     patch:
       tags:
-        - Admin - Catalog
+      - Admin - Catalog
       summary: Update/disable variant
       operationId: adminPatchVariant
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id004
-        - *id001
+      - *id004
+      - *id001
       requestBody:
         required: true
         content:
@@ -1433,14 +1412,14 @@ paths:
   /admin/products/{id}/images:
     post:
       tags:
-        - Admin - Catalog
+      - Admin - Catalog
       summary: Upload catalog product image
       operationId: adminUploadProductImage
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id004
-        - *id001
+      - *id004
+      - *id001
       requestBody:
         required: true
         content:
@@ -1494,7 +1473,7 @@ paths:
   /admin/products/{id}/images/{imageId}:
     delete:
       tags:
-        - Admin - Catalog
+      - Admin - Catalog
       summary: Remove product image
       operationId: adminRemoveProductImage
       description: 'Cannot remove last image of an active published product unless first disabled.
@@ -1502,16 +1481,16 @@ paths:
 
         Requires authenticated ADMIN session.'
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id004
-        - name: imageId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - *id001
+      - *id004
+      - name: imageId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - *id001
       responses:
         '204':
           description: No content
@@ -1542,24 +1521,24 @@ paths:
   /admin/custom-requests:
     get:
       tags:
-        - Admin - Requests
+      - Admin - Requests
       summary: List requests awaiting/admin review
       operationId: adminListRequests
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id002
-        - *id003
-        - name: status
-          in: query
-          schema:
-            type: string
-            enum:
-              - SUBMITTED
-              - UNDER_REVIEW
-              - NEEDS_INFO
-              - REJECTED
-              - QUOTED
+      - *id002
+      - *id003
+      - name: status
+        in: query
+        schema:
+          type: string
+          enum:
+          - SUBMITTED
+          - UNDER_REVIEW
+          - NEEDS_INFO
+          - REJECTED
+          - QUOTED
       responses:
         '200':
           description: OK
@@ -1589,13 +1568,13 @@ paths:
   /admin/custom-requests/{id}:
     get:
       tags:
-        - Admin - Requests
+      - Admin - Requests
       summary: Get request details, images and review state
       operationId: adminGetCustomRequest
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id004
+      - *id004
       responses:
         '200':
           description: OK
@@ -1624,19 +1603,19 @@ paths:
       description: Requires authenticated ADMIN session.
     patch:
       tags:
-        - Admin - Requests
+      - Admin - Requests
       summary: Start review / ask for info / reject
       operationId: adminReviewCustomRequest
-      description: 'Allowed SUBMITTED→UNDER_REVIEW, UNDER_REVIEW→NEEDS_INFO (reviewNote required), UNDER_REVIEW→REJECTED (rejectionReason
-        required). No generic QUOTED update; issue quote to reach QUOTED.
+      description: 'Allowed SUBMITTED→UNDER_REVIEW, UNDER_REVIEW→NEEDS_INFO (reviewNote required), UNDER_REVIEW→REJECTED
+        (rejectionReason required). No generic QUOTED update; issue quote to reach QUOTED.
 
 
         Requires authenticated ADMIN session.'
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id004
-        - *id001
+      - *id004
+      - *id001
       requestBody:
         required: true
         content:
@@ -1683,20 +1662,18 @@ paths:
   /admin/custom-requests/{id}/quotes:
     post:
       tags:
-        - Admin - Requests
+      - Admin - Requests
       summary: Create and send single final quote
       operationId: adminCreateQuote
-      description: 'Only UNDER_REVIEW; only one Quote per custom request (unique custom_request_id). Server computes total,
-        fixes currency and 7-day expiry, changes custom request to QUOTED in one transaction. Quote shipping is priced using
-        deliveryCity from request.
-
-
-        Requires authenticated ADMIN session.'
+      description: ADMIN only; UNDER_REVIEW custom request only, UNIQUE quote per custom request. Price includes
+        design/manufacturing in unitPrice; NO quote shipping. The quote total = unitPrice × quantity, and quantity
+        must match request quantity. Seven-day expiry. ADMIN estimatedCost is internal and excluded from public
+        response. Request becomes QUOTED atomically.
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id004
-        - *id001
+      - *id004
+      - *id001
       requestBody:
         required: true
         content:
@@ -1709,7 +1686,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Quote'
+                $ref: '#/components/schemas/AdminQuote'
         '400':
           description: Invalid request
           content:
@@ -1743,26 +1720,26 @@ paths:
   /admin/orders:
     get:
       tags:
-        - Admin - Orders
+      - Admin - Orders
       summary: List all orders for fulfillment
       operationId: adminListOrders
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id002
-        - *id003
-        - name: status
-          in: query
-          schema:
-            type: string
-            enum:
-              - PENDING_PAYMENT
-              - CONFIRMED
-              - IN_PROGRESS
-              - READY_FOR_DELIVERY
-              - SHIPPED
-              - DELIVERED
-              - CANCELLED
+      - *id002
+      - *id003
+      - name: status
+        in: query
+        schema:
+          type: string
+          enum:
+          - PENDING_PAYMENT
+          - CONFIRMED
+          - IN_PROGRESS
+          - READY_FOR_DELIVERY
+          - SHIPPED
+          - DELIVERED
+          - CANCELLED
       responses:
         '200':
           description: OK
@@ -1792,13 +1769,13 @@ paths:
   /admin/orders/{id}:
     get:
       tags:
-        - Admin - Orders
+      - Admin - Orders
       summary: Get any order for fulfillment
       operationId: adminGetOrder
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id004
+      - *id004
       responses:
         '200':
           description: OK
@@ -1827,18 +1804,17 @@ paths:
       description: Requires authenticated ADMIN session.
     patch:
       tags:
-        - Admin - Orders
+      - Admin - Orders
       summary: Advance fulfillment status
       operationId: adminAdvanceOrder
-      description: 'Requires ADMIN session. Normal path: CONFIRMED -> IN_PROGRESS -> READY_FOR_DELIVERY -> SHIPPED -> DELIVERED.
-        Orders with ALL IN_STOCK lines may skip IN_PROGRESS (CONFIRMED -> READY_FOR_DELIVERY); mixed and MADE_TO_ORDER orders
-        must pass IN_PROGRESS. IN_PROGRESS means preparation and/or manufacturing. Every transition records order_status_history.
-        Payment success is handled ONLY by the payment service.'
+      description: 'ADMIN transitions: CONFIRMED→IN_PROGRESS→READY_FOR_DELIVERY→SHIPPED→DELIVERED; if every purchased
+        item is IN_STOCK, CONFIRMED→READY_FOR_DELIVERY is allowed. No partial shipping or status history. PENDING_PAYMENT
+        cancellation is customer-only.'
       security:
-        - sessionCookie: []
+      - sessionCookie: []
       parameters:
-        - *id004
-        - *id001
+      - *id004
+      - *id001
       requestBody:
         required: true
         content:
@@ -1888,23 +1864,23 @@ components:
       type: apiKey
       in: cookie
       name: session
-      description: 'HttpOnly session cookie named session, as in the teammate Postman examples; MUST confirm actual Set-Cookie
-        from running backend. Browser sends cookie with credentials: include.'
+      description: Session cookie placeholder name session based on teammate Postman. Actual Set-Cookie/CORS/CSRF
+        behavior must be confirmed from running NestJS; do not assume production config.
   parameters:
     CsrfHeader:
       name: X-CSRF-Token
       in: header
       required: true
-      description: CSRF token returned by GET /auth/csrf-token; send on POST, PATCH, DELETE requests (including OTP 
-        endpoints). Session cookie must be included.
+      description: CSRF token returned by GET /auth/csrf-token; send on POST, PATCH, DELETE requests (including
+        OTP endpoints). Session cookie must be included.
       schema:
         type: string
     IdempotencyKey:
       name: Idempotency-Key
       in: header
       required: true
-      description: 'Random UUID-like key per logical checkout/payment operation. Retry using same key and same body. Scope:
-        customer+order creation, or order+payment attempt.'
+      description: 'Random UUID-like key per logical checkout/payment operation. Retry using same key and same body.
+        Scope: customer+order creation, or order+payment attempt.'
       schema:
         type: string
         minLength: 8
@@ -1928,13 +1904,13 @@ components:
     User:
       type: object
       required:
-        - id
-        - fullName
-        - email
-        - phone
-        - role
-        - isVerified
-        - createdAt
+      - id
+      - fullName
+      - email
+      - phone
+      - role
+      - isVerified
+      - createdAt
       properties:
         id:
           type: string
@@ -1956,8 +1932,8 @@ components:
         role:
           type: string
           enum:
-            - CUSTOMER
-            - ADMIN
+          - CUSTOMER
+          - ADMIN
           readOnly: true
         isVerified:
           type: boolean
@@ -1968,8 +1944,8 @@ components:
     AuthCredentials:
       type: object
       required:
-        - email
-        - password
+      - email
+      - password
       additionalProperties: false
       properties:
         email:
@@ -1984,10 +1960,10 @@ components:
     RegisterInput:
       type: object
       required:
-        - fullName
-        - email
-        - phone
-        - password
+      - fullName
+      - email
+      - phone
+      - password
       additionalProperties: false
       properties:
         fullName:
@@ -2009,19 +1985,18 @@ components:
           minLength: 8
           maxLength: 128
           format: password
-      description: role is NOT accepted. The server always creates public registrations with role=CUSTOMER and 
-        isVerified=false.
+      description: role is NOT accepted. The server always creates public registrations with role=CUSTOMER and isVerified=false.
     AuthResponse:
       type: object
       required:
-        - user
+      - user
       properties:
         user:
           $ref: '#/components/schemas/User'
     CsrfTokenResponse:
       type: object
       required:
-        - csrfToken
+      - csrfToken
       properties:
         csrfToken:
           type: string
@@ -2029,13 +2004,13 @@ components:
     ApiError:
       type: object
       required:
-        - error
+      - error
       properties:
         error:
           type: object
           required:
-            - code
-            - message
+          - code
+          - message
           properties:
             code:
               type: string
@@ -2044,17 +2019,16 @@ components:
               type: string
               example: لا يمكن إكمال العملية في الحالة الحالية.
             details:
-              type: object
-              additionalProperties: true
+              $ref: '#/components/schemas/ErrorDetails'
             requestId:
               type: string
               example: req_b43d
     Pagination:
       type: object
       required:
-        - page
-        - limit
-        - total
+      - page
+      - limit
+      - total
       properties:
         page:
           type: integer
@@ -2066,16 +2040,16 @@ components:
           maximum: 100
           example: 20
         total:
-          type: integer
-          minimum: 0
-          example: 42
+          type: string
+          example: '0.42'
+          pattern: ^(0|[1-9][0-9]{0,9})\.[0-9]{2}$
     Category:
       type: object
       required:
-        - id
-        - name
-        - slug
-        - isActive
+      - id
+      - name
+      - slug
+      - isActive
       properties:
         id:
           type: string
@@ -2091,8 +2065,8 @@ components:
     CreateCategoryInput:
       type: object
       required:
-        - name
-        - slug
+      - name
+      - slug
       additionalProperties: false
       properties:
         name:
@@ -2123,9 +2097,9 @@ components:
     ProductImage:
       type: object
       required:
-        - id
-        - url
-        - sortOrder
+      - id
+      - url
+      - sortOrder
       properties:
         id:
           type: string
@@ -2143,17 +2117,17 @@ components:
     ProductVariant:
       type: object
       required:
-        - id
-        - productId
-        - sku
-        - material
-        - color
-        - priceMinor
-        - currency
-        - isActive
-        - fulfillmentMode
-        - stockQuantity
-        - isAvailable
+      - id
+      - productId
+      - sku
+      - material
+      - color
+      - price
+      - currency
+      - isActive
+      - fulfillmentMode
+      - stockQuantity
+      - isAvailable
       properties:
         id:
           type: string
@@ -2170,28 +2144,23 @@ components:
         color:
           type: string
           example: أسود
-        priceMinor:
-          type: integer
-          minimum: 0
-          example: 70000
         currency:
           type: string
-          example: SYP
           enum:
-            - SYP
-          description: 'عملة واحدة: الليرة السورية الجديدة (SYP). المبالغ في أصغر وحدة؛ 100 قرش = 1 ليرة.'
+          - SYP
+          example: SYP
         isActive:
           type: boolean
         fulfillmentMode:
           type: string
           enum:
-            - IN_STOCK
-            - MADE_TO_ORDER
+          - IN_STOCK
+          - MADE_TO_ORDER
           description: Ready inventory or print-on-demand, configured per variant.
         stockQuantity:
           type: integer
           minimum: 0
-          description: Ready units for IN_STOCK; always 0 for MADE_TO_ORDER. This is not a reservation at checkout.
+          description: Ready stock quantity for IN_STOCK; 0 for MADE_TO_ORDER. No stock reservation on checkout.
         estimatedProductionDays:
           type: integer
           minimum: 1
@@ -2200,17 +2169,22 @@ components:
         isAvailable:
           type: boolean
           description: 'Server-derived: isActive AND product.isActive AND (MADE_TO_ORDER OR stockQuantity > 0).'
+        price:
+          type: string
+          example: '700.00'
+          pattern: ^(0|[1-9][0-9]{0,9})\.[0-9]{2}$
+          description: SYP, fixed decimal string (two decimals); server-owned catalog price. Numeric in PostgreSQL.
     Product:
       type: object
       required:
-        - id
-        - categoryId
-        - title
-        - description
-        - isActive
-        - images
-        - variants
-        - startingPriceMinor
+      - id
+      - categoryId
+      - title
+      - description
+      - isActive
+      - images
+      - variants
+      - startingPrice
       properties:
         id:
           type: string
@@ -2234,17 +2208,17 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProductVariant'
-        startingPriceMinor:
-          type: integer
-          minimum: 0
+        startingPrice:
+          type: string
           nullable: true
-          description: Computed minimum priceMinor among active, available variants; null when none can be ordered. 
-            Never stored as product.price.
+          description: Minimum price of ACTIVE and AVAILABLE variants, computed by backend; not stored in products.
+          pattern: ^(0|[1-9][0-9]{0,9})\.[0-9]{2}$
+          example: '150.00'
     CreateProductInput:
       type: object
       required:
-        - title
-        - description
+      - title
+      - description
       additionalProperties: false
       properties:
         categoryId:
@@ -2279,11 +2253,11 @@ components:
     CreateVariantInput:
       type: object
       required:
-        - sku
-        - material
-        - color
-        - priceMinor
-        - fulfillmentMode
+      - sku
+      - material
+      - color
+      - price
+      - fulfillmentMode
       additionalProperties: false
       properties:
         sku:
@@ -2298,17 +2272,14 @@ components:
           type: string
           minLength: 2
           maxLength: 60
-        priceMinor:
-          type: integer
-          minimum: 0
         isActive:
           type: boolean
           default: true
         fulfillmentMode:
           type: string
           enum:
-            - IN_STOCK
-            - MADE_TO_ORDER
+          - IN_STOCK
+          - MADE_TO_ORDER
         stockQuantity:
           type: integer
           minimum: 0
@@ -2317,14 +2288,19 @@ components:
           type: integer
           minimum: 1
           nullable: true
-        estimatedUnitCostMinor:
-          type: integer
-          minimum: 0
+        price:
+          type: string
+          pattern: ^(0|[1-9][0-9]{0,9})\.[0-9]{2}$
+          example: '150.00'
+        unitCost:
+          type: string
           nullable: true
-          description: Admin-only estimated manufacturing cost per unit; optional and not a sale price.
-      description: 'Fulfillment is configured per variant. IN_STOCK: stockQuantity >= 0 and estimatedProductionDays must be
-        omitted/null. MADE_TO_ORDER: stockQuantity must be 0; estimatedProductionDays >= 1. Service validates cross-field
-        rules. estimatedUnitCostMinor is internal, never public.'
+          description: Internal estimated cost per unit. ADMIN ONLY.
+          pattern: ^(0|[1-9][0-9]{0,9})\.[0-9]{2}$
+          example: '80.00'
+      description: 'Fulfillment is configured per variant. IN_STOCK: stockQuantity >= 0 and estimatedProductionDays
+        must be omitted/null. MADE_TO_ORDER: stockQuantity must be 0; estimatedProductionDays >= 1. Service validates
+        cross-field rules. unitCost is internal, never public.'
     UpdateVariantInput:
       type: object
       minProperties: 1
@@ -2342,16 +2318,13 @@ components:
           type: string
           minLength: 2
           maxLength: 60
-        priceMinor:
-          type: integer
-          minimum: 0
         isActive:
           type: boolean
         fulfillmentMode:
           type: string
           enum:
-            - IN_STOCK
-            - MADE_TO_ORDER
+          - IN_STOCK
+          - MADE_TO_ORDER
         stockQuantity:
           type: integer
           minimum: 0
@@ -2359,17 +2332,22 @@ components:
           type: integer
           minimum: 1
           nullable: true
-        estimatedUnitCostMinor:
-          type: integer
-          minimum: 0
+        price:
+          type: string
+          pattern: ^(0|[1-9][0-9]{0,9})\.[0-9]{2}$
+          example: '150.00'
+        unitCost:
+          type: string
           nullable: true
-          description: Admin-only estimated manufacturing cost per unit; optional and not a sale price.
-      description: Partial administrative edit. Server enforces fulfillment cross-field constraints after applying 
+          description: Internal estimated cost per unit. ADMIN ONLY.
+          pattern: ^(0|[1-9][0-9]{0,9})\.[0-9]{2}$
+          example: '80.00'
+      description: Partial administrative edit. Server enforces fulfillment cross-field constraints after applying
         patch. stockQuantity is an absolute count (not a delta); checkout stock deductions are automatic and atomic.
     Measurements:
       type: object
-      description: Optional dimensions in millimeters; unknown values may be omitted. Measurements are not 
-        production-ready until expert review.
+      description: Optional dimensions in millimeters; unknown values may be omitted. Measurements are not production-ready
+        until expert review.
       additionalProperties: false
       properties:
         lengthMm:
@@ -2403,11 +2381,11 @@ components:
     RequestAttachment:
       type: object
       required:
-        - id
-        - fileName
-        - mimeType
-        - sizeBytes
-        - contentUrl
+      - id
+      - fileName
+      - mimeType
+      - sizeBytes
+      - contentUrl
       properties:
         id:
           type: string
@@ -2417,9 +2395,9 @@ components:
         mimeType:
           type: string
           enum:
-            - image/jpeg
-            - image/png
-            - image/webp
+          - image/jpeg
+          - image/png
+          - image/webp
         sizeBytes:
           type: integer
           minimum: 1
@@ -2429,18 +2407,16 @@ components:
     CustomRequest:
       type: object
       required:
-        - id
-        - customerId
-        - type
-        - title
-        - description
-        - quantity
-        - usageContext
-        - deliveryCity
-        - status
-        - attachments
-        - createdAt
-        - updatedAt
+      - id
+      - customerId
+      - type
+      - title
+      - description
+      - quantity
+      - status
+      - attachments
+      - createdAt
+      - updatedAt
       properties:
         id:
           type: string
@@ -2451,8 +2427,8 @@ components:
         type:
           type: string
           enum:
-            - BROKEN_PART
-            - FROM_IMAGE
+          - BROKEN_PART
+          - FROM_IMAGE
         title:
           type: string
         description:
@@ -2460,30 +2436,17 @@ components:
         quantity:
           type: integer
           minimum: 1
-        usageContext:
-          type: string
-        deviceBrand:
-          type: string
-          nullable: true
-        deviceModel:
-          type: string
-          nullable: true
         measurements:
           $ref: '#/components/schemas/Measurements'
-        deliveryCity:
-          type: string
-          description: Needed before admin prices shipping in the quote.
-        deliveryRegion:
-          type: string
           nullable: true
         status:
           type: string
           enum:
-            - SUBMITTED
-            - UNDER_REVIEW
-            - NEEDS_INFO
-            - REJECTED
-            - QUOTED
+          - SUBMITTED
+          - UNDER_REVIEW
+          - NEEDS_INFO
+          - REJECTED
+          - QUOTED
         reviewNote:
           type: string
           nullable: true
@@ -2505,22 +2468,27 @@ components:
         updatedAt:
           type: string
           format: date-time
+        sourceRequestId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Original custom request copied via Reorder. Only allowed if its CUSTOM order is DELIVERED
+            or CANCELLED; owner must match.
+      description: Custom manufacturing request; no draft. sourceRequestId is optional audit pointer to a previously
+        completed/cancelled custom order, not a reused quote.
     CreateCustomMultipart:
       type: object
       required:
-        - type
-        - title
-        - description
-        - quantity
-        - usageContext
-        - deliveryCity
-        - photos
+      - type
+      - title
+      - description
+      - quantity
       properties:
         type:
           type: string
           enum:
-            - BROKEN_PART
-            - FROM_IMAGE
+          - BROKEN_PART
+          - FROM_IMAGE
         title:
           type: string
           minLength: 3
@@ -2533,28 +2501,10 @@ components:
           type: integer
           minimum: 1
           maximum: 100
-        usageContext:
-          type: string
-          minLength: 5
-          maxLength: 2000
-          description: Purpose, installation, exposure to heat/load, and safety concerns.
-        deviceBrand:
-          type: string
-          maxLength: 120
-        deviceModel:
-          type: string
-          maxLength: 120
-        deliveryCity:
-          type: string
-          minLength: 2
-          maxLength: 120
-        deliveryRegion:
-          type: string
-          maxLength: 120
         measurementsJson:
           type: string
-          description: Optional JSON string conforming to Measurements schema (multipart text field). All dimensions in 
-            mm.
+          description: Optional JSON string conforming to Measurements schema (multipart text field). All dimensions
+            in mm.
           example: '{"lengthMm":45,"widthMm":22,"notes":"hole center uncertain"}'
         photos:
           type: array
@@ -2563,16 +2513,26 @@ components:
           items:
             type: string
             format: binary
-          description: 1–5 JPEG/PNG/WebP images, max 10 MB each.
+          description: For a fresh request supply 1–5 photos. On reorder with sourceRequestId, server copies original
+            attachments so new photos are optional; total 1–5. JPEG/PNG/WebP; maximum 10,485,760 bytes each.
+        sourceRequestId:
+          type: string
+          format: uuid
+          description: Optional previous custom request to copy photos and prefilling. Must have an associated CUSTOM
+            order with status DELIVERED or CANCELLED, belonging to this user.
+      description: Create immediately SUBMITTED. Fields title, description, quantity and type are required even
+        on reorder (the UI prefills them); there is no DRAFT. Reorder photos may be reused by server only after
+        validating ownership and original order status. Source attachments MUST be copied or safely reference-counted;
+        never let deleting new attachments corrupt originals.
     ResubmitCustomMultipart:
       type: object
       required:
-        - status
+      - status
       properties:
         status:
           type: string
           enum:
-            - SUBMITTED
+          - SUBMITTED
           description: Atomic resubmission from NEEDS_INFO; only customer owner.
         title:
           type: string
@@ -2586,23 +2546,6 @@ components:
           type: integer
           minimum: 1
           maximum: 100
-        usageContext:
-          type: string
-          minLength: 5
-          maxLength: 2000
-        deviceBrand:
-          type: string
-          maxLength: 120
-        deviceModel:
-          type: string
-          maxLength: 120
-        deliveryCity:
-          type: string
-          minLength: 2
-          maxLength: 120
-        deliveryRegion:
-          type: string
-          maxLength: 120
         measurementsJson:
           type: string
           description: Optional JSON string replacing all saved measurements; blank/omitted means unchanged.
@@ -2612,35 +2555,38 @@ components:
           items:
             type: string
             format: binary
-          description: Images to append; combined retained + new count must be 1–5.
+          description: Optional images to append (max 10,485,760 bytes each); 1–5 must remain after removals.
         removeAttachmentIds:
           type: array
           uniqueItems: true
           items:
             type: string
             format: uuid
-          description: Existing images to remove atomically during resubmission. Must belong to this request.
+          description: Repeated multipart fields with the exact key removeAttachmentIds (no brackets and no JSON);
+            every value UUID belonging to this request.
+      description: Allowed only when NEEDS_INFO; updates fields and images and atomically returns to SUBMITTED.
+        No draft; minimum 1 and maximum 5 images retained.
     AdminStartReviewInput:
       type: object
       required:
-        - status
+      - status
       additionalProperties: false
       properties:
         status:
           type: string
           enum:
-            - UNDER_REVIEW
+          - UNDER_REVIEW
     AdminNeedsInfoInput:
       type: object
       required:
-        - status
-        - reviewNote
+      - status
+      - reviewNote
       additionalProperties: false
       properties:
         status:
           type: string
           enum:
-            - NEEDS_INFO
+          - NEEDS_INFO
         reviewNote:
           type: string
           minLength: 5
@@ -2648,23 +2594,23 @@ components:
     AdminRejectInput:
       type: object
       required:
-        - status
-        - rejectionReason
+      - status
+      - rejectionReason
       additionalProperties: false
       properties:
         status:
           type: string
           enum:
-            - REJECTED
+          - REJECTED
         rejectionReason:
           type: string
           minLength: 5
           maxLength: 2000
     AdminReviewInput:
       oneOf:
-        - $ref: '#/components/schemas/AdminStartReviewInput'
-        - $ref: '#/components/schemas/AdminNeedsInfoInput'
-        - $ref: '#/components/schemas/AdminRejectInput'
+      - $ref: '#/components/schemas/AdminStartReviewInput'
+      - $ref: '#/components/schemas/AdminNeedsInfoInput'
+      - $ref: '#/components/schemas/AdminRejectInput'
       discriminator:
         propertyName: status
         mapping:
@@ -2674,20 +2620,18 @@ components:
     Quote:
       type: object
       required:
-        - id
-        - customRequestId
-        - preparedByAdminId
-        - quantity
-        - material
-        - designFeeMinor
-        - unitPriceMinor
-        - shippingFeeMinor
-        - totalMinor
-        - currency
-        - estimatedProductionDays
-        - status
-        - expiresAt
-        - createdAt
+      - id
+      - customRequestId
+      - preparedByAdminId
+      - quantity
+      - material
+      - unitPrice
+      - total
+      - currency
+      - estimatedProductionDays
+      - status
+      - expiresAt
+      - createdAt
       properties:
         id:
           type: string
@@ -2704,59 +2648,52 @@ components:
         material:
           type: string
           example: PETG
-        designFeeMinor:
-          type: integer
-          minimum: 0
-          example: 500
-        unitPriceMinor:
-          type: integer
-          minimum: 0
-          example: 700
-        shippingFeeMinor:
-          type: integer
-          minimum: 0
-          example: 300
-        totalMinor:
-          type: integer
-          minimum: 0
-          example: 2200
-          description: Server computes designFeeMinor + unitPriceMinor * quantity + shippingFeeMinor.
         currency:
           type: string
           example: SYP
           enum:
-            - SYP
-          description: 'عملة واحدة: الليرة السورية الجديدة (SYP). المبالغ في أصغر وحدة؛ 100 قرش = 1 ليرة.'
+          - SYP
+          description: 'عملة واحدة: الليرة السورية الجديدة (SYP). المبالغ كسلاسل عشرية بوحدة الليرة السورية الجديدة، وليست بوحدة فرعية.'
         estimatedProductionDays:
           type: integer
           minimum: 1
           example: 5
+          description: Time until custom manufacturing is ready; included in quote.
         notes:
           type: string
           nullable: true
         status:
           type: string
           enum:
-            - SENT
-            - ACCEPTED
-            - DECLINED
-            - EXPIRED
+          - SENT
+          - ACCEPTED
+          - DECLINED
+          - EXPIRED
         expiresAt:
           type: string
           format: date-time
-          description: Always exactly seven days after issue; server checks at acceptance regardless of stored status.
+          description: Server assigns expiry exactly 7 days after createdAt; acceptance checks timestamp even if
+            status still SENT.
         createdAt:
           type: string
           format: date-time
+        unitPrice:
+          type: string
+          example: '100.00'
+          pattern: ^(0|[1-9][0-9]{0,9})\.[0-9]{2}$
+        total:
+          type: string
+          example: '300.00'
+          description: Quote total before delivery; unitPrice × quantity only; NO shipping and NO separate design
+            fee.
+          pattern: ^(0|[1-9][0-9]{0,9})\.[0-9]{2}$
     CreateQuoteInput:
       type: object
       required:
-        - quantity
-        - material
-        - designFeeMinor
-        - unitPriceMinor
-        - shippingFeeMinor
-        - estimatedProductionDays
+      - quantity
+      - material
+      - unitPrice
+      - estimatedProductionDays
       additionalProperties: false
       properties:
         quantity:
@@ -2767,15 +2704,6 @@ components:
           type: string
           minLength: 2
           maxLength: 100
-        designFeeMinor:
-          type: integer
-          minimum: 0
-        unitPriceMinor:
-          type: integer
-          minimum: 0
-        shippingFeeMinor:
-          type: integer
-          minimum: 0
         estimatedProductionDays:
           type: integer
           minimum: 1
@@ -2783,67 +2711,112 @@ components:
         notes:
           type: string
           maxLength: 2000
+        unitPrice:
+          type: string
+          pattern: ^(0|[1-9][0-9]{0,9})\.[0-9]{2}$
+          example: '100.00'
+        estimatedCost:
+          type: string
+          pattern: ^(0|[1-9][0-9]{0,9})\.[0-9]{2}$
+          nullable: true
+          example: '170.00'
+          description: ADMIN ONLY estimated cost of fulfilling ALL units of the quote.
+      description: Server requires quantity to equal approved customRequest.quantity. Quote covers design + manufacturing
+        IN unitPrice; no separate design fee or shipping. Currency SYP. Quote amount = quantity × unitPrice. Valid
+        for exactly 7 days.
     Address:
       type: object
+      description: >-
+        Shipping-address snapshot saved in orders.shipping_address (PostgreSQL JSONB).
+        recipientName, phone, city and details are mandatory. Map coordinates are
+        optional; include BOTH latitude and longitude when a pin is selected, or
+        omit BOTH when no pin is selected. Coordinates are delivery guidance,
+        not an input for shipping-fee calculation. Do not send street, region,
+        district, postalCode, deliveryNotes or fullName in this object.
       required:
-        - fullName
-        - phone
-        - city
-        - street
+      - recipientName
+      - phone
+      - city
+      - details
       additionalProperties: false
       properties:
-        fullName:
+        recipientName:
           type: string
           minLength: 2
           maxLength: 150
+          example: أحمد محمد
         phone:
           type: string
           minLength: 5
           maxLength: 30
+          example: '09xxxxxxxx'
         city:
           type: string
           minLength: 2
           maxLength: 120
-        region:
-          type: string
-          maxLength: 120
-        street:
+          example: دمشق
+        details:
           type: string
           minLength: 4
-          maxLength: 255
-        postalCode:
-          type: string
-          maxLength: 30
-        deliveryNotes:
-          type: string
           maxLength: 500
+          example: المزة، شارع كذا، بناء 12، الطابق الثاني
+          description: Free-text district, street, building and floor information in one field.
+        latitude:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+          example: 33.503
+          description: Optional map-pin latitude; must be supplied with longitude.
+        longitude:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+          example: 36.25
+          description: Optional map-pin longitude; must be supplied with latitude.
+      oneOf:
+      - required: [latitude, longitude]
+      - not:
+          anyOf:
+          - required: [latitude]
+          - required: [longitude]
+      example:
+        recipientName: أحمد محمد
+        phone: '09xxxxxxxx'
+        city: دمشق
+        details: المزة، شارع كذا، بناء 12، الطابق الثاني
+        latitude: 33.503
+        longitude: 36.25
     AcceptQuoteInput:
       type: object
       required:
-        - status
-        - shippingAddress
+      - status
+      - shippingAddress
       additionalProperties: false
       properties:
         status:
           type: string
           enum:
-            - ACCEPTED
+          - ACCEPTED
         shippingAddress:
           $ref: '#/components/schemas/Address'
+      description: Customer accepts quote with full shipping address. Quote has no shipping; server adds fixed SYP
+        shipping fee when creating PENDING_PAYMENT Order.
     DeclineQuoteInput:
       type: object
       required:
-        - status
+      - status
       additionalProperties: false
       properties:
         status:
           type: string
           enum:
-            - DECLINED
+          - DECLINED
     QuoteDecisionInput:
       oneOf:
-        - $ref: '#/components/schemas/AcceptQuoteInput'
-        - $ref: '#/components/schemas/DeclineQuoteInput'
+      - $ref: '#/components/schemas/AcceptQuoteInput'
+      - $ref: '#/components/schemas/DeclineQuoteInput'
       discriminator:
         propertyName: status
         mapping:
@@ -2852,30 +2825,29 @@ components:
     QuoteDecisionResponse:
       type: object
       required:
-        - quote
-        - order
+      - quote
+      - order
       properties:
         quote:
           $ref: '#/components/schemas/Quote'
         order:
           type: object
           allOf:
-            - $ref: '#/components/schemas/Order'
+          - $ref: '#/components/schemas/Order'
           nullable: true
           description: Order created/reused for ACCEPTED, null for DECLINED.
     OrderItem:
       type: object
       required:
-        - id
-        - orderId
-        - sourceType
-        - titleSnapshot
-        - quantity
-        - unitPriceMinor
-        - designFeeMinor
-        - lineTotalMinor
-        - reviewed
-        - fulfillmentModeSnapshot
+      - id
+      - orderId
+      - sourceType
+      - title
+      - quantity
+      - unitPrice
+      - lineTotal
+      - reviewed
+      - fulfillmentMode
       properties:
         id:
           type: string
@@ -2886,8 +2858,8 @@ components:
         sourceType:
           type: string
           enum:
-            - CATALOG
-            - CUSTOM
+          - CATALOG
+          - CUSTOM
         productVariantId:
           type: string
           format: uuid
@@ -2896,57 +2868,57 @@ components:
           type: string
           format: uuid
           nullable: true
-        titleSnapshot:
-          type: string
-        materialSnapshot:
-          type: string
-          nullable: true
-        colorSnapshot:
-          type: string
-          nullable: true
         quantity:
           type: integer
           minimum: 1
-        unitPriceMinor:
-          type: integer
-          minimum: 0
-        designFeeMinor:
-          type: integer
-          minimum: 0
-          description: Zero for catalog; one-time design fee for custom.
-        lineTotalMinor:
-          type: integer
-          minimum: 0
-          description: unitPriceMinor * quantity + designFeeMinor.
         reviewed:
           type: boolean
           description: Whether a review has been submitted for this item.
-        fulfillmentModeSnapshot:
+        unitPrice:
+          type: string
+          pattern: ^(0|[1-9][0-9]{0,9})\.[0-9]{2}$
+          example: '150.00'
+        lineTotal:
+          type: string
+          description: quantity × unitPrice, fixed decimal SYP string. No separate design fee.
+          pattern: ^(0|[1-9][0-9]{0,9})\.[0-9]{2}$
+          example: '300.00'
+        title:
+          type: string
+        material:
+          type: string
+          nullable: true
+        color:
+          type: string
+          nullable: true
+        fulfillmentMode:
           type: string
           enum:
-            - IN_STOCK
-            - MADE_TO_ORDER
+          - IN_STOCK
+          - MADE_TO_ORDER
           description: Mode at order creation. CUSTOM quote items always MADE_TO_ORDER. Immutable after checkout.
-        estimatedProductionDaysSnapshot:
+        estimatedProductionDays:
           type: integer
           minimum: 1
           nullable: true
           description: Original production lead time for the purchased line; null for IN_STOCK.
+      description: Item snapshots at checkout (public aliases title/material/color/fulfillmentMode). Product variant
+        ID XOR quote ID. CUSTOM always MADE_TO_ORDER; quote purchased once max.
     Order:
       type: object
       required:
-        - id
-        - customerId
-        - source
-        - status
-        - items
-        - shippingAddress
-        - subtotalMinor
-        - shippingFeeMinor
-        - totalMinor
-        - currency
-        - createdAt
-        - updatedAt
+      - id
+      - customerId
+      - source
+      - status
+      - items
+      - shippingAddress
+      - subtotal
+      - shippingFee
+      - total
+      - currency
+      - createdAt
+      - updatedAt
       properties:
         id:
           type: string
@@ -2957,18 +2929,18 @@ components:
         source:
           type: string
           enum:
-            - CATALOG
-            - CUSTOM
+          - CATALOG
+          - CUSTOM
         status:
           type: string
           enum:
-            - PENDING_PAYMENT
-            - CONFIRMED
-            - IN_PROGRESS
-            - READY_FOR_DELIVERY
-            - SHIPPED
-            - DELIVERED
-            - CANCELLED
+          - PENDING_PAYMENT
+          - CONFIRMED
+          - IN_PROGRESS
+          - READY_FOR_DELIVERY
+          - SHIPPED
+          - DELIVERED
+          - CANCELLED
         items:
           type: array
           minItems: 1
@@ -2976,40 +2948,39 @@ components:
             $ref: '#/components/schemas/OrderItem'
         shippingAddress:
           $ref: '#/components/schemas/Address'
-        subtotalMinor:
-          type: integer
-          minimum: 0
-          description: Sum of lineTotalMinor.
-        shippingFeeMinor:
-          type: integer
-          minimum: 0
-        totalMinor:
-          type: integer
-          minimum: 0
-          description: subtotalMinor + shippingFeeMinor.
         currency:
           type: string
           example: SYP
           enum:
-            - SYP
-          description: 'عملة واحدة: الليرة السورية الجديدة (SYP). المبالغ في أصغر وحدة؛ 100 قرش = 1 ليرة.'
-        trackingNumber:
-          type: string
-          nullable: true
-        carrier:
-          type: string
-          nullable: true
+          - SYP
+          description: 'عملة واحدة: الليرة السورية الجديدة (SYP). المبالغ في أصغر وحدة؛ أسعار كسلاسل عشرية بالليرة
+            السورية الجديدة.'
         createdAt:
           type: string
           format: date-time
         updatedAt:
           type: string
           format: date-time
+        subtotal:
+          type: string
+          description: Sum of order.items[].lineTotal, exact decimal SYP string.
+          pattern: ^(0|[1-9][0-9]{0,9})\.[0-9]{2}$
+        shippingFee:
+          type: string
+          pattern: ^(0|[1-9][0-9]{0,9})\.[0-9]{2}$
+          description: Fixed server-configured delivery fee applied ONCE when order is created; customer cannot
+            set it.
+        total:
+          type: string
+          description: subtotal + shippingFee. This is the amount for all payment attempts.
+          pattern: ^(0|[1-9][0-9]{0,9})\.[0-9]{2}$
+      description: One order status for all its items; no split shipments. If all IN_STOCK, CONFIRMED can go directly
+        to READY_FOR_DELIVERY; otherwise via IN_PROGRESS. No status-history endpoint in v1.3.
     CatalogCheckoutItem:
       type: object
       required:
-        - variantId
-        - quantity
+      - variantId
+      - quantity
       additionalProperties: false
       properties:
         variantId:
@@ -3022,8 +2993,8 @@ components:
     CreateCatalogOrderInput:
       type: object
       required:
-        - items
-        - shippingAddress
+      - items
+      - shippingAddress
       additionalProperties: false
       properties:
         items:
@@ -3032,53 +3003,45 @@ components:
           maxItems: 30
           items:
             $ref: '#/components/schemas/CatalogCheckoutItem'
-          description: Each variantId must occur at most once. Enforced by application validation (uniqueItems cannot 
+          description: Each variantId must occur at most once. Enforced by application validation (uniqueItems cannot
             enforce uniqueness by one object property).
         shippingAddress:
           $ref: '#/components/schemas/Address'
-      description: Browser cart payload. Duplicate variantIds are rejected with 400 even if uniqueItems (whole-object 
-        uniqueness) does not detect them. No client prices. IN_STOCK availability is checked here but stock is NOT 
+      description: Browser cart payload. Duplicate variantIds are rejected with 400 even if uniqueItems (whole-object
+        uniqueness) does not detect them. No client prices. IN_STOCK availability is checked here but stock is NOT
         reserved; it is rechecked and deducted atomically on successful mock payment.
     CancelOrderInput:
       type: object
       required:
-        - status
+      - status
       additionalProperties: false
       properties:
         status:
           type: string
           enum:
-            - CANCELLED
+          - CANCELLED
     AdminOrderStatusInput:
       type: object
       required:
-        - status
+      - status
       additionalProperties: false
       properties:
         status:
           type: string
           enum:
-            - IN_PROGRESS
-            - READY_FOR_DELIVERY
-            - SHIPPED
-            - DELIVERED
-        carrier:
-          type: string
-          maxLength: 100
-          description: Optional when marking SHIPPED.
-        trackingNumber:
-          type: string
-          maxLength: 150
-          description: Optional when marking SHIPPED.
+          - IN_PROGRESS
+          - READY_FOR_DELIVERY
+          - SHIPPED
+          - DELIVERED
     PaymentAttempt:
       type: object
       required:
-        - id
-        - orderId
-        - status
-        - amountMinor
-        - currency
-        - createdAt
+      - id
+      - orderId
+      - status
+      - amount
+      - currency
+      - createdAt
       properties:
         id:
           type: string
@@ -3089,90 +3052,59 @@ components:
         status:
           type: string
           enum:
-            - SUCCEEDED
-            - FAILED
-        amountMinor:
-          type: integer
-          minimum: 0
+          - SUCCEEDED
+          - FAILED
         currency:
           type: string
           enum:
-            - SYP
+          - SYP
           example: SYP
-          description: 'عملة واحدة: الليرة السورية الجديدة (SYP). المبالغ في أصغر وحدة؛ 100 قرش = 1 ليرة.'
+          description: 'عملة واحدة: الليرة السورية الجديدة (SYP). المبالغ في أصغر وحدة؛ أسعار كسلاسل عشرية بالليرة
+            السورية الجديدة.'
         failureReason:
           type: string
           nullable: true
-          description: 'For a simulated failure: SIMULATED_FAILURE. Out-of-stock at payment is reported as HTTP 409 and does
-            not create an attempt.'
+          description: 'For a simulated failure: SIMULATED_FAILURE. Out-of-stock at payment is reported as HTTP
+            409 and does not create an attempt.'
         createdAt:
           type: string
           format: date-time
+        amount:
+          type: string
+          pattern: ^(0|[1-9][0-9]{0,9})\.[0-9]{2}$
+          example: '320.00'
+          description: Snapshot equal to order.total at attempt time; SYP string.
     MockPaymentInput:
       type: object
       required:
-        - testScenario
+      - testScenario
       additionalProperties: false
       properties:
         testScenario:
           type: string
           enum:
-            - SUCCESS
-            - FAILURE
-          description: Demo-only control. SUCCESS can still return HTTP 409 if inventory is insufficient; no real 
+          - SUCCESS
+          - FAILURE
+          description: Demo-only control. SUCCESS can still return HTTP 409 if inventory is insufficient; no real
             charge.
     PaymentAttemptResult:
       type: object
       required:
-        - attempt
-        - order
+      - attempt
+      - order
       properties:
         attempt:
           $ref: '#/components/schemas/PaymentAttempt'
         order:
           $ref: '#/components/schemas/Order'
-    OrderStatusHistory:
-      type: object
-      required:
-        - id
-        - orderId
-        - toStatus
-        - changedAt
-      properties:
-        id:
-          type: string
-          format: uuid
-        orderId:
-          type: string
-          format: uuid
-        fromStatus:
-          type: string
-          nullable: true
-        toStatus:
-          type: string
-          enum:
-            - PENDING_PAYMENT
-            - CONFIRMED
-            - IN_PROGRESS
-            - READY_FOR_DELIVERY
-            - SHIPPED
-            - DELIVERED
-            - CANCELLED
-        changedByUserId:
-          type: string
-          format: uuid
-          nullable: true
-        changedAt:
-          type: string
-          format: date-time
     OrderItemReview:
       type: object
       required:
-        - id
-        - orderItemId
-        - customerId
-        - rating
-        - createdAt
+      - id
+      - orderItemId
+      - customerId
+      - rating
+      - createdAt
       properties:
         id:
           type: string
@@ -3196,7 +3128,7 @@ components:
     CreateReviewInput:
       type: object
       required:
-        - rating
+      - rating
       additionalProperties: false
       properties:
         rating:
@@ -3209,7 +3141,7 @@ components:
     CategoryList:
       type: object
       required:
-        - data
+      - data
       properties:
         data:
           type: array
@@ -3218,8 +3150,8 @@ components:
     ProductList:
       type: object
       required:
-        - data
-        - pagination
+      - data
+      - pagination
       properties:
         data:
           type: array
@@ -3230,8 +3162,8 @@ components:
     CustomRequestList:
       type: object
       required:
-        - data
-        - pagination
+      - data
+      - pagination
       properties:
         data:
           type: array
@@ -3242,8 +3174,8 @@ components:
     OrderList:
       type: object
       required:
-        - data
-        - pagination
+      - data
+      - pagination
       properties:
         data:
           type: array
@@ -3254,7 +3186,7 @@ components:
     PaymentAttemptList:
       type: object
       required:
-        - data
+      - data
       properties:
         data:
           type: array
@@ -3263,9 +3195,9 @@ components:
     PublicReview:
       type: object
       required:
-        - id
-        - rating
-        - createdAt
+      - id
+      - rating
+      - createdAt
       properties:
         id:
           type: string
@@ -3283,8 +3215,8 @@ components:
     ReviewList:
       type: object
       required:
-        - data
-        - pagination
+      - data
+      - pagination
       properties:
         data:
           type: array
@@ -3295,7 +3227,7 @@ components:
     ProductImageUpload:
       type: object
       required:
-        - image
+      - image
       properties:
         image:
           type: string
@@ -3310,8 +3242,8 @@ components:
       type: object
       additionalProperties: false
       required:
-        - email
-        - otpCode
+      - email
+      - otpCode
       properties:
         email:
           type: string
@@ -3325,7 +3257,7 @@ components:
       type: object
       additionalProperties: false
       required:
-        - email
+      - email
       properties:
         email:
           type: string
@@ -3333,41 +3265,42 @@ components:
     OtpMessageResponse:
       type: object
       required:
-        - message
+      - message
       properties:
         message:
           type: string
           example: تم تفعيل الحساب بنجاح.
     AdminProductVariant:
       allOf:
-        - $ref: '#/components/schemas/ProductVariant'
-        - type: object
-          required:
-            - estimatedUnitCostMinor
-          properties:
-            estimatedUnitCostMinor:
-              type: integer
-              minimum: 0
-              nullable: true
-              description: Internal estimate, never present in public ProductVariant.
+      - $ref: '#/components/schemas/ProductVariant'
+      - type: object
+        required:
+        - unitCost
+        properties:
+          unitCost:
+            type: string
+            nullable: true
+            description: ADMIN ONLY; internal estimated cost per single variant unit, null if unknown.
+            pattern: ^(0|[1-9][0-9]{0,9})\.[0-9]{2}$
+            example: '75.00'
       description: ADMIN ONLY. Public fields plus internal cost estimate.
     AdminProduct:
       allOf:
-        - $ref: '#/components/schemas/Product'
-        - type: object
-          required:
-            - variants
-          properties:
-            variants:
-              type: array
-              items:
-                $ref: '#/components/schemas/AdminProductVariant'
+      - $ref: '#/components/schemas/Product'
+      - type: object
+        required:
+        - variants
+        properties:
+          variants:
+            type: array
+            items:
+              $ref: '#/components/schemas/AdminProductVariant'
       description: ADMIN ONLY. Same product plus variants with internal costs.
     AdminProductList:
       type: object
       required:
-        - data
-        - pagination
+      - data
+      - pagination
       properties:
         data:
           type: array
@@ -3377,36 +3310,37 @@ components:
           $ref: '#/components/schemas/Pagination'
     AdminOrderItem:
       allOf:
-        - $ref: '#/components/schemas/OrderItem'
-        - type: object
-          required:
-            - estimatedUnitCostSnapshotMinor
-          properties:
-            estimatedUnitCostSnapshotMinor:
-              type: integer
-              minimum: 0
-              nullable: true
-              description: Internal per-unit cost estimate copied from variant at checkout. May be null for custom or 
-                unknown costs.
+      - $ref: '#/components/schemas/OrderItem'
+      - type: object
+        required:
+        - estimatedCost
+        properties:
+          estimatedCost:
+            type: string
+            pattern: ^(0|[1-9][0-9]{0,9})\.[0-9]{2}$
+            nullable: true
+            example: '160.00'
+            description: ADMIN ONLY; estimated INTERNAL cost of the entire line (quantity included). Snapshot, not
+              charged to customer.
       description: ADMIN ONLY item with estimated cost snapshot.
     AdminOrder:
       allOf:
-        - $ref: '#/components/schemas/Order'
-        - type: object
-          required:
-            - items
-          properties:
+      - $ref: '#/components/schemas/Order'
+      - type: object
+        required:
+        - items
+        properties:
+          items:
+            type: array
+            minItems: 1
             items:
-              type: array
-              minItems: 1
-              items:
-                $ref: '#/components/schemas/AdminOrderItem'
+              $ref: '#/components/schemas/AdminOrderItem'
       description: ADMIN ONLY order view with internal item cost estimates.
     AdminOrderList:
       type: object
       required:
-        - data
-        - pagination
+      - data
+      - pagination
       properties:
         data:
           type: array
@@ -3414,3 +3348,49 @@ components:
             $ref: '#/components/schemas/AdminOrder'
         pagination:
           $ref: '#/components/schemas/Pagination'
+    AdminQuote:
+      allOf:
+      - $ref: '#/components/schemas/Quote'
+      - type: object
+        properties:
+          estimatedCost:
+            type: string
+            nullable: true
+            pattern: ^(0|[1-9][0-9]{0,9})\.[0-9]{2}$
+            example: '170.00'
+            description: ADMIN ONLY. Internal estimate for entire custom request and all units (not per unit).
+      description: ADMIN ONLY. Includes optional estimated internal cost for the full quote.
+    FieldError:
+      type: object
+      required:
+      - field
+      - code
+      - message
+      properties:
+        field:
+          type: string
+          example: email
+        code:
+          type: string
+          example: INVALID_FORMAT
+        message:
+          type: string
+          example: البريد الإلكتروني غير صالح.
+    ErrorDetails:
+      type: object
+      description: Validation error details, if applicable. Not all errors have field-level details.
+      properties:
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldError'
+      additionalProperties: true
+x-print-it-business-rules:
+  money: 'JSON: fixed two-decimal SYP strings e.g. "150.00"; PostgreSQL NUMERIC(12,2), no floats.'
+  shipping: Fixed server-controlled fee added once on Order creation, NOT included in Quote and not supplied by
+    client.
+  customReorder: New SUBMITTED request from sourceRequestId only when corresponding CUSTOM order DELIVERED or CANCELLED;
+    new quote required; source attachments copied safely.
+  authImplementationStatus: Session/cookie/CSRF/OTP resend implementation details PENDING confirmation by Auth teammate.
+  noOrderHistory: No order_status_history table or GET status-history route in MVP.
+  apiVersioning: URI remains /api/v1; document info.version is v1.3 contract revision.

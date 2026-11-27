@@ -1,0 +1,155 @@
+erDiagram
+    USERS {
+      UUID id PK
+      VARCHAR_150 full_name
+      VARCHAR_255 email
+      VARCHAR_30 phone
+      TEXT password_hash
+      VARCHAR_16 role
+      BOOLEAN is_verified
+      TIMESTAMPTZ created_at
+      TIMESTAMPTZ updated_at
+    }
+    CATEGORIES {
+      UUID id PK
+      VARCHAR_120 name
+      VARCHAR_140 slug UK
+      BOOLEAN is_active
+      TIMESTAMPTZ created_at
+      TIMESTAMPTZ updated_at
+    }
+    PRODUCTS {
+      UUID id PK
+      UUID category_id FK
+      VARCHAR_180 title
+      TEXT description
+      BOOLEAN is_active
+      TIMESTAMPTZ created_at
+      TIMESTAMPTZ updated_at
+    }
+    PRODUCT_VARIANTS {
+      UUID id PK
+      UUID product_id FK
+      VARCHAR_80 sku UK
+      VARCHAR_80 material
+      VARCHAR_80 color
+      NUMERIC_12_2 price
+      NUMERIC_12_2 unit_cost
+      CHAR_3 currency
+      VARCHAR_20 fulfillment_mode
+      INTEGER stock_quantity
+      INTEGER estimated_production_days
+      BOOLEAN is_active
+      TIMESTAMPTZ created_at
+      TIMESTAMPTZ updated_at
+    }
+    PRODUCT_IMAGES {
+      UUID id PK
+      UUID product_id FK
+      TEXT storage_key
+      VARCHAR_180 alt_text
+      INTEGER sort_order
+      TIMESTAMPTZ created_at
+    }
+    CUSTOM_REQUESTS {
+      UUID id PK
+      UUID customer_id FK
+      UUID source_request_id FK
+      VARCHAR_20 type
+      VARCHAR_180 title
+      TEXT description
+      INTEGER quantity
+      JSONB measurements_mm
+      VARCHAR_20 status
+      TEXT review_note
+      TEXT rejection_reason
+      TIMESTAMPTZ created_at
+      TIMESTAMPTZ updated_at
+    }
+    REQUEST_ATTACHMENTS {
+      UUID id PK
+      UUID request_id FK
+      TEXT storage_key
+      VARCHAR_255 original_filename
+      VARCHAR_80 mime_type
+      BIGINT size_bytes
+      TIMESTAMPTZ created_at
+    }
+    QUOTES {
+      UUID id PK
+      UUID request_id FK
+      UUID admin_id FK
+      INTEGER quantity
+      VARCHAR_100 material
+      NUMERIC_12_2 unit_price
+      NUMERIC_12_2 total
+      NUMERIC_12_2 estimated_cost
+      CHAR_3 currency
+      INTEGER estimated_days
+      TEXT notes
+      VARCHAR_16 status
+      TIMESTAMPTZ expires_at
+      TIMESTAMPTZ created_at
+    }
+    ORDERS {
+      UUID id PK
+      UUID customer_id FK
+      VARCHAR_12 source
+      VARCHAR_24 status
+      JSONB shipping_address
+      NUMERIC_12_2 subtotal
+      NUMERIC_12_2 shipping_fee
+      NUMERIC_12_2 total
+      CHAR_3 currency
+      VARCHAR_120 idempotency_key
+      TIMESTAMPTZ created_at
+      TIMESTAMPTZ updated_at
+    }
+    ORDER_ITEMS {
+      UUID id PK
+      UUID order_id FK
+      UUID product_variant_id FK
+      UUID quote_id FK
+      VARCHAR_180 title_snapshot
+      VARCHAR_100 material_snapshot
+      VARCHAR_80 color_snapshot
+      INTEGER quantity
+      NUMERIC_12_2 unit_price
+      NUMERIC_12_2 line_total
+      NUMERIC_12_2 estimated_cost
+      VARCHAR_20 fulfillment_mode
+      INTEGER estimated_production_days
+    }
+    PAYMENT_ATTEMPTS {
+      UUID id PK
+      UUID order_id FK
+      VARCHAR_16 status
+      NUMERIC_12_2 amount
+      CHAR_3 currency
+      VARCHAR_120 idempotency_key
+      VARCHAR_100 failure_reason
+      TIMESTAMPTZ created_at
+    }
+    ORDER_ITEM_REVIEWS {
+      UUID id PK
+      UUID order_item_id FK
+      UUID customer_id FK
+      SMALLINT rating
+      TEXT comment
+      TIMESTAMPTZ created_at
+    }
+    USERS ||--o{ CUSTOM_REQUESTS : customer
+    USERS ||--o{ QUOTES : prepared_by
+    USERS ||--o{ ORDERS : customer
+    USERS ||--o{ ORDER_ITEM_REVIEWS : reviewer
+    CATEGORIES ||--o{ PRODUCTS : category
+    PRODUCTS ||--o{ PRODUCT_VARIANTS : variants
+    PRODUCTS ||--o{ PRODUCT_IMAGES : shared_images
+    CUSTOM_REQUESTS ||--o{ REQUEST_ATTACHMENTS : attachments
+    CUSTOM_REQUESTS ||--o| QUOTES : quote
+    PRODUCT_VARIANTS ||--o{ ORDER_ITEMS : catalog
+    QUOTES ||--o{ ORDER_ITEMS : custom
+    ORDERS ||--o{ ORDER_ITEMS : lines
+    ORDERS ||--o{ PAYMENT_ATTEMPTS : attempts
+    ORDER_ITEMS ||--o| ORDER_ITEM_REVIEWS : review
+    CUSTOM_REQUESTS o|--o{ CUSTOM_REQUESTS : reordered_from
