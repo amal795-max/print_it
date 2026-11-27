@@ -1,41 +1,45 @@
 openapi: 3.0.3
 info:
   title: Print It API
-  version: 1.1.0-contract
+  version: 1.2.0
   description: 'Print It — B2C Arabic-only web MVP. Contract aligned with teammate Auth Postman: register(fullName,email,phone,password),
-    email OTP verify, session cookie, role assigned server-side. REST-style resource URLs, URI versioning via /api/v1.
-    SYP only: NEW Syrian pound, 100 qirsh = 1 SYP; all monetary *Minor fields are integer qirsh, server calculated; do
-    not reuse old USD sample prices. Arabic user-facing content and error.message; English API property names/enums/material
-    codes remain stable. Browser-only cart, products+variants, one quote per request, customer request NEEDS_INFO flow,
-    order item reviews, mock payment. \nAuth endpoints: GET /auth/csrf-token first, POST /auth/register, POST /auth/verify-otp,
-    POST /auth/resend-otp (planned, requires Auth implementation), POST /auth/login, GET /auth/me, POST /auth/logout.
-    CSRF tokens must refresh after login; configure Secure/SameSite/CORS per deployment. This is a proposed API contract,
-    not proof that backend endpoints are implemented.'
+    email OTP verify, session cookie, role assigned server-side. REST-style resource URLs, URI versioning via /api/v1. SYP
+    only: NEW Syrian pound, 100 qirsh = 1 SYP; all monetary *Minor fields are integer qirsh, server calculated; do not reuse
+    old USD sample prices. Arabic user-facing content and error.message; English API property names/enums/material codes remain
+    stable. Browser-only cart, products+variants, one quote per request, customer request NEEDS_INFO flow, order item reviews,
+    mock payment. \nAuth endpoints: GET /auth/csrf-token first, POST /auth/register, POST /auth/verify-otp, POST /auth/resend-otp
+    (planned, requires Auth implementation), POST /auth/login, GET /auth/me, POST /auth/logout. CSRF tokens must refresh after
+    login; configure Secure/SameSite/CORS per deployment. This is a proposed API contract, not proof that backend endpoints
+    are implemented.
+
+
+    Contract v1.2: hybrid catalog inventory (IN_STOCK / MADE_TO_ORDER), computed starting price, internal cost estimates,
+    and concurrency-safe mock payment. API URL stays /api/v1. All client-facing monetary amounts are minor SYP units.'
   contact:
     name: Print It Backend Team
 servers:
-- url: http://localhost:3000/api/v1
-  description: Local NestJS API, URI versioning
+  - url: http://localhost:3000/api/v1
+    description: Local NestJS API, URI versioning
 tags:
-- name: Auth
-- name: Catalog
-- name: Custom Requests
-- name: Quotes
-- name: Orders
-- name: Payments
-- name: Reviews
-- name: Admin - Catalog
-- name: Admin - Requests
-- name: Admin - Orders
+  - name: Auth
+  - name: Catalog
+  - name: Custom Requests
+  - name: Quotes
+  - name: Orders
+  - name: Payments
+  - name: Reviews
+  - name: Admin - Catalog
+  - name: Admin - Requests
+  - name: Admin - Orders
 paths:
   /auth/csrf-token:
     get:
       tags:
-      - Auth
+        - Auth
       summary: Get CSRF token and establish anonymous session
       operationId: getCsrfToken
-      description: Obtain CSRF token bound to (possibly anonymous) server session; required before register, verify
-        OTP, resend OTP, login, and all other unsafe methods. Fetch again after login/session regeneration.
+      description: Obtain CSRF token bound to (possibly anonymous) server session; required before register, verify OTP,
+        resend OTP, login, and all other unsafe methods. Fetch again after login/session regeneration.
       security: []
       responses:
         '200':
@@ -47,15 +51,15 @@ paths:
   /auth/register:
     post:
       tags:
-      - Auth
+        - Auth
       summary: Create customer account
       operationId: register
-      description: 'Public registration: backend assigns CUSTOMER, creates isVerified=false, sends one-time email OTP.
-        Does not create authenticated session. Do not accept role from client. Endpoint URI: /api/v1/auth/register.'
+      description: 'Public registration: backend assigns CUSTOMER, creates isVerified=false, sends one-time email OTP. Does
+        not create authenticated session. Do not accept role from client. Endpoint URI: /api/v1/auth/register.'
       security: []
       parameters:
-      - &id001
-        $ref: '#/components/parameters/CsrfHeader'
+        - &id001
+          $ref: '#/components/parameters/CsrfHeader'
       requestBody:
         required: true
         content:
@@ -90,15 +94,15 @@ paths:
   /auth/verify-otp:
     post:
       tags:
-      - Auth
+        - Auth
       summary: Verify email using one-time OTP
       operationId: verifyEmailOtp
-      description: 'Matches the teammate Auth contract: code sent at registration. Single-use, expires, rate-limited
-        and consumed atomically. Success enables isVerified=true. No session is issued by verification; customer logs
-        in afterward. Endpoint URI: /api/v1/auth/verify-otp.'
+      description: 'Matches the teammate Auth contract: code sent at registration. Single-use, expires, rate-limited and consumed
+        atomically. Success enables isVerified=true. No session is issued by verification; customer logs in afterward. Endpoint
+        URI: /api/v1/auth/verify-otp.'
       security: []
       parameters:
-      - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/CsrfHeader'
       requestBody:
         required: true
         content:
@@ -133,15 +137,15 @@ paths:
   /auth/resend-otp:
     post:
       tags:
-      - Auth
+        - Auth
       summary: Resend email activation OTP
       operationId: resendEmailOtp
-      description: 'Recommended OTP support endpoint for expired/missing email. Always return generic response even for
-        unknown/already verified accounts; apply cooldown and per-email/IP rate limiting. Planned contract: Auth owner
-        must implement before frontend depends on it. Endpoint URI: /api/v1/auth/resend-otp.'
+      description: 'Recommended OTP support endpoint for expired/missing email. Always return generic response even for unknown/already
+        verified accounts; apply cooldown and per-email/IP rate limiting. Planned contract: Auth owner must implement before
+        frontend depends on it. Endpoint URI: /api/v1/auth/resend-otp.'
       security: []
       parameters:
-      - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/CsrfHeader'
       requestBody:
         required: true
         content:
@@ -170,7 +174,7 @@ paths:
   /auth/login:
     post:
       tags:
-      - Auth
+        - Auth
       summary: Authenticate and create session cookie
       operationId: login
       description: Validate email/password, require verified email, then regenerate session ID and set HttpOnly 
@@ -178,7 +182,7 @@ paths:
         frontend fetches a fresh token afterward.
       security: []
       parameters:
-      - *id001
+        - *id001
       requestBody:
         required: true
         content:
@@ -219,11 +223,11 @@ paths:
   /auth/me:
     get:
       tags:
-      - Auth
+        - Auth
       summary: Current authenticated user
       operationId: getMe
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       responses:
         '200':
           description: OK
@@ -240,14 +244,14 @@ paths:
   /auth/logout:
     post:
       tags:
-      - Auth
+        - Auth
       summary: Destroy current session
       operationId: logout
       description: Destroy server session and clear cookie; frontend must forget cached CSRF token.
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id001
+        - *id001
       responses:
         '204':
           description: No content
@@ -260,7 +264,7 @@ paths:
   /categories:
     get:
       tags:
-      - Catalog
+        - Catalog
       summary: List active categories
       operationId: listCategories
       security: []
@@ -274,25 +278,25 @@ paths:
   /products:
     get:
       tags:
-      - Catalog
+        - Catalog
       summary: List active products with variants
       operationId: listProducts
       security: []
       parameters:
-      - &id002
-        $ref: '#/components/parameters/Page'
-      - &id003
-        $ref: '#/components/parameters/Limit'
-      - name: categoryId
-        in: query
-        schema:
-          type: string
-          format: uuid
-      - name: search
-        in: query
-        schema:
-          type: string
-          maxLength: 120
+        - &id002
+          $ref: '#/components/parameters/Page'
+        - &id003
+          $ref: '#/components/parameters/Limit'
+        - name: categoryId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 120
       responses:
         '200':
           description: OK
@@ -309,18 +313,18 @@ paths:
   /products/{id}:
     get:
       tags:
-      - Catalog
+        - Catalog
       summary: Get published product and variants
       operationId: getProduct
       security: []
       parameters:
-      - &id004
-        name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+        - &id004
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: OK
@@ -337,16 +341,16 @@ paths:
   /custom-requests:
     post:
       tags:
-      - Custom Requests
+        - Custom Requests
       summary: Create and submit custom request with photos
       operationId: createCustomRequest
-      description: Creates SUBMITTED immediately (no DRAFT); 1–5 photos, each <=10 MB, at least one retained at all
+      description: Creates SUBMITTED immediately (no DRAFT); 1–5 photos, each <=10 MB, at least one retained at all 
         times. measurementsJson is a JSON string. Customer ID comes from session. Atomic DB insert + safe storage 
         cleanup on failure.
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id001
+        - *id001
       requestBody:
         required: true
         content:
@@ -389,14 +393,14 @@ paths:
                 $ref: '#/components/schemas/ApiError'
     get:
       tags:
-      - Custom Requests
+        - Custom Requests
       summary: List my custom requests
       operationId: listMyCustomRequests
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id002
-      - *id003
+        - *id002
+        - *id003
       responses:
         '200':
           description: OK
@@ -419,14 +423,14 @@ paths:
   /custom-requests/{id}:
     get:
       tags:
-      - Custom Requests
+        - Custom Requests
       summary: Get own custom request
       operationId: getMyCustomRequest
       description: Also available to ADMIN under /admin/custom-requests/{id}.
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id004
+        - *id004
       responses:
         '200':
           description: OK
@@ -448,16 +452,16 @@ paths:
                 $ref: '#/components/schemas/ApiError'
     patch:
       tags:
-      - Custom Requests
+        - Custom Requests
       summary: Complete missing information and resubmit
       operationId: resubmitCustomRequest
-      description: 'Only owner from NEEDS_INFO. Updates supplied fields, atomically adds/removes photos, and transitions
-        to SUBMITTED. Non-supplied fields stay unchanged. Total photos after changes: 1–5. No free edits after QUOTED/REJECTED.'
+      description: 'Only owner from NEEDS_INFO. Updates supplied fields, atomically adds/removes photos, and transitions to
+        SUBMITTED. Non-supplied fields stay unchanged. Total photos after changes: 1–5. No free edits after QUOTED/REJECTED.'
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id004
-      - *id001
+        - *id004
+        - *id001
       requestBody:
         required: true
         content:
@@ -513,20 +517,20 @@ paths:
   /custom-requests/{id}/attachments/{attachmentId}/content:
     get:
       tags:
-      - Custom Requests
+        - Custom Requests
       summary: View private request photo
       operationId: getCustomAttachmentContent
       description: Returns a protected image stream. Avoid exposing storage keys or unguarded public URLs.
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id004
-      - name: attachmentId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+        - *id004
+        - name: attachmentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: Image bytes; owner or ADMIN only
@@ -558,15 +562,14 @@ paths:
   /quotes/{id}:
     get:
       tags:
-      - Quotes
+        - Quotes
       summary: Read my offer/quotation
       operationId: getQuote
-      description: Effective status is EXPIRED if a SENT quote passed expiresAt even if a background job has not 
-        run.
+      description: Effective status is EXPIRED if a SENT quote passed expiresAt even if a background job has not run.
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id004
+        - *id004
       responses:
         '200':
           description: OK
@@ -588,18 +591,18 @@ paths:
                 $ref: '#/components/schemas/ApiError'
     patch:
       tags:
-      - Quotes
+        - Quotes
       summary: Accept or decline a quote
       operationId: decideQuote
-      description: Only request owner. ACCEPTED requires shippingAddress; city must equal the city priced in custom
+      description: Only request owner. ACCEPTED requires shippingAddress; city must equal the city priced in custom 
         request. Accept creates exactly one CUSTOM Order with one quote-backed item and PENDING_PAYMENT in one DB 
-        transaction. Repeated ACCEPTED returns the same order; after expiry or DECLINED returns 409. DECLINED 
-        closes quote without an order.
+        transaction. Repeated ACCEPTED returns the same order; after expiry or DECLINED returns 409. DECLINED closes 
+        quote without an order.
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id004
-      - *id001
+        - *id004
+        - *id001
       requestBody:
         required: true
         content:
@@ -640,18 +643,19 @@ paths:
   /orders:
     post:
       tags:
-      - Orders
+        - Orders
       summary: Checkout browser cart and create catalog order
       operationId: createCatalogOrder
-      description: Creates CATALOG Order from variantId + quantity only. Backend validates active variants, 
-        calculates price snapshots and fixed shipping fee, ignores any client-calculated prices. No server-side 
-        Cart or CartItem. Idempotency-Key scoped to customer; same key with different payload returns 409.
+      description: Creates CATALOG Order from unique variantId + quantity using current server prices (no client price 
+        or server cart); validates variant active and orderable. IN_STOCK quantity is checked, not reserved. Calculates 
+        snapshots and fixed SYP shipping fee. On mock payment SUCCESS stock is rechecked and decremented atomically. 
+        Duplicate variantIds return 400, insufficient stock returns 409. Idempotency-Key prevents duplicate orders.
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id001
-      - &id005
-        $ref: '#/components/parameters/IdempotencyKey'
+        - *id001
+        - &id005
+          $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -690,21 +694,21 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
         '409':
-          description: Resource state conflict
+          description: Insufficient IN_STOCK availability, conflicting idempotency key, or variant not orderable.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiError'
     get:
       tags:
-      - Orders
+        - Orders
       summary: List my orders
       operationId: listMyOrders
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id002
-      - *id003
+        - *id002
+        - *id003
       responses:
         '200':
           description: OK
@@ -727,13 +731,13 @@ paths:
   /orders/{id}:
     get:
       tags:
-      - Orders
+        - Orders
       summary: Get my order, items, tracking and review flags
       operationId: getMyOrder
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id004
+        - *id004
       responses:
         '200':
           description: OK
@@ -755,16 +759,16 @@ paths:
                 $ref: '#/components/schemas/ApiError'
     patch:
       tags:
-      - Orders
+        - Orders
       summary: Cancel my unpaid order
       operationId: cancelMyUnpaidOrder
-      description: Only owner and only while PENDING_PAYMENT, before any successful payment. No refunds in v1; 
-        payment and cancellation race must use transaction/row lock.
+      description: Only owner and only while PENDING_PAYMENT, before any successful payment. No refunds in v1; payment 
+        and cancellation race must use transaction/row lock.
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id004
-      - *id001
+        - *id004
+        - *id001
       requestBody:
         required: true
         content:
@@ -805,13 +809,13 @@ paths:
   /orders/{id}/status-history:
     get:
       tags:
-      - Orders
+        - Orders
       summary: View order status timeline
       operationId: getOrderStatusHistory
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id004
+        - *id004
       responses:
         '200':
           description: History oldest to newest
@@ -820,7 +824,7 @@ paths:
               schema:
                 type: object
                 required:
-                - data
+                  - data
                 properties:
                   data:
                     type: array
@@ -841,19 +845,20 @@ paths:
   /orders/{id}/payment-attempts:
     post:
       tags:
-      - Payments
+        - Payments
       summary: Run immediate mock payment
       operationId: createPaymentAttempt
-      description: DEMO ONLY. A validated testScenario controls the simulated branch; backend creates SUCCEEDED or 
-        FAILED and stores the attempt. FAILED leaves Order PENDING_PAYMENT. SUCCEEDED atomically confirms Order. 
-        Rejects orders already confirmed or cancelled, except idempotent replay; only one successful attempt 
-        allowed.
+      description: Demo-only immediate payment. A SUCCESS testScenario rechecks stock for every IN_STOCK item and 
+        atomically decrements it (sorted by variant ID), creates the single SUCCEEDED attempt, and confirms the order in
+        one PostgreSQL transaction. If insufficient stock, roll back and return HTTP 409 with error.code=OUT_OF_STOCK; 
+        NO payment attempt or stock change. Simulated FAILURE creates a FAILED attempt (201), leaves stock unchanged and
+        Order PENDING_PAYMENT. Idempotency-Key replay never charges/deducts twice. No external card charge.
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id004
-      - *id001
-      - *id005
+        - *id004
+        - *id001
+        - *id005
       requestBody:
         required: true
         content:
@@ -892,20 +897,21 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
         '409':
-          description: Resource state conflict
+          description: Order status conflict OR stock unavailable at payment (error.code=OUT_OF_STOCK); transaction 
+            rolls back without a payment attempt.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiError'
     get:
       tags:
-      - Payments
+        - Payments
       summary: List my mock payment attempts
       operationId: listPaymentAttempts
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id004
+        - *id004
       responses:
         '200':
           description: OK
@@ -928,16 +934,16 @@ paths:
   /order-items/{id}/reviews:
     post:
       tags:
-      - Reviews
+        - Reviews
       summary: Review purchased order item after delivery
       operationId: createOrderItemReview
-      description: Exactly one review per order item (UNIQUE order_item_id). Owner only; owning Order must be 
-        DELIVERED. Applies to catalog and custom items.
+      description: Exactly one review per order item (UNIQUE order_item_id). Owner only; owning Order must be DELIVERED.
+        Applies to catalog and custom items.
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id004
-      - *id001
+        - *id004
+        - *id001
       requestBody:
         required: true
         content:
@@ -978,16 +984,16 @@ paths:
   /products/{id}/reviews:
     get:
       tags:
-      - Reviews
+        - Reviews
       summary: List item reviews for product
       operationId: getProductReviews
-      description: Public reviews for catalog OrderItems referencing a variant of this product, after delivered 
-        orders only. Do not expose reviewer private data.
+      description: Public reviews for catalog OrderItems referencing a variant of this product, after delivered orders 
+        only. Do not expose reviewer private data.
       security: []
       parameters:
-      - *id004
-      - *id002
-      - *id003
+        - *id004
+        - *id002
+        - *id003
       responses:
         '200':
           description: OK
@@ -1010,11 +1016,11 @@ paths:
   /admin/categories:
     get:
       tags:
-      - Admin - Catalog
+        - Admin - Catalog
       summary: List all categories including inactive
       operationId: adminListCategories
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       responses:
         '200':
           description: OK
@@ -1037,13 +1043,13 @@ paths:
       description: Requires authenticated ADMIN session.
     post:
       tags:
-      - Admin - Catalog
+        - Admin - Catalog
       summary: Create category
       operationId: adminCreateCategory
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id001
+        - *id001
       requestBody:
         required: true
         content:
@@ -1085,14 +1091,14 @@ paths:
   /admin/categories/{id}:
     patch:
       tags:
-      - Admin - Catalog
+        - Admin - Catalog
       summary: Update/disable category
       operationId: adminPatchCategory
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id004
-      - *id001
+        - *id004
+        - *id001
       requestBody:
         required: true
         content:
@@ -1140,21 +1146,21 @@ paths:
   /admin/products:
     get:
       tags:
-      - Admin - Catalog
+        - Admin - Catalog
       summary: List all products including unpublished
       operationId: adminListProducts
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id002
-      - *id003
+        - *id002
+        - *id003
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProductList'
+                $ref: '#/components/schemas/AdminProductList'
         '400':
           description: Invalid request
           content:
@@ -1176,13 +1182,13 @@ paths:
       description: Requires authenticated ADMIN session.
     post:
       tags:
-      - Admin - Catalog
+        - Admin - Catalog
       summary: Create unpublished catalog product
       operationId: adminCreateProduct
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id001
+        - *id001
       requestBody:
         required: true
         content:
@@ -1195,7 +1201,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Product'
+                $ref: '#/components/schemas/AdminProduct'
         '400':
           description: Invalid request
           content:
@@ -1224,20 +1230,20 @@ paths:
   /admin/products/{id}:
     get:
       tags:
-      - Admin - Catalog
+        - Admin - Catalog
       summary: Read product including unpublished
       operationId: adminGetProduct
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id004
+        - *id004
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Product'
+                $ref: '#/components/schemas/AdminProduct'
         '401':
           description: Session missing or expired.
           content:
@@ -1259,7 +1265,7 @@ paths:
       description: Requires authenticated ADMIN session.
     patch:
       tags:
-      - Admin - Catalog
+        - Admin - Catalog
       summary: Update/publish/disable product
       operationId: adminPatchProduct
       description: 'Publishing requires >=1 active variant and >=1 image. Existing OrderItem snapshots are never changed.
@@ -1267,10 +1273,10 @@ paths:
 
         Requires authenticated ADMIN session.'
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id004
-      - *id001
+        - *id004
+        - *id001
       requestBody:
         required: true
         content:
@@ -1283,7 +1289,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Product'
+                $ref: '#/components/schemas/AdminProduct'
         '400':
           description: Invalid request
           content:
@@ -1317,14 +1323,14 @@ paths:
   /admin/products/{id}/variants:
     post:
       tags:
-      - Admin - Catalog
+        - Admin - Catalog
       summary: Create product variant
       operationId: adminCreateVariant
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id004
-      - *id001
+        - *id004
+        - *id001
       requestBody:
         required: true
         content:
@@ -1337,7 +1343,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProductVariant'
+                $ref: '#/components/schemas/AdminProductVariant'
         '400':
           description: Invalid request
           content:
@@ -1372,14 +1378,14 @@ paths:
   /admin/variants/{id}:
     patch:
       tags:
-      - Admin - Catalog
+        - Admin - Catalog
       summary: Update/disable variant
       operationId: adminPatchVariant
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id004
-      - *id001
+        - *id004
+        - *id001
       requestBody:
         required: true
         content:
@@ -1392,7 +1398,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProductVariant'
+                $ref: '#/components/schemas/AdminProductVariant'
         '400':
           description: Invalid request
           content:
@@ -1427,14 +1433,14 @@ paths:
   /admin/products/{id}/images:
     post:
       tags:
-      - Admin - Catalog
+        - Admin - Catalog
       summary: Upload catalog product image
       operationId: adminUploadProductImage
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id004
-      - *id001
+        - *id004
+        - *id001
       requestBody:
         required: true
         content:
@@ -1488,7 +1494,7 @@ paths:
   /admin/products/{id}/images/{imageId}:
     delete:
       tags:
-      - Admin - Catalog
+        - Admin - Catalog
       summary: Remove product image
       operationId: adminRemoveProductImage
       description: 'Cannot remove last image of an active published product unless first disabled.
@@ -1496,16 +1502,16 @@ paths:
 
         Requires authenticated ADMIN session.'
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id004
-      - name: imageId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - *id001
+        - *id004
+        - name: imageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - *id001
       responses:
         '204':
           description: No content
@@ -1536,24 +1542,24 @@ paths:
   /admin/custom-requests:
     get:
       tags:
-      - Admin - Requests
+        - Admin - Requests
       summary: List requests awaiting/admin review
       operationId: adminListRequests
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id002
-      - *id003
-      - name: status
-        in: query
-        schema:
-          type: string
-          enum:
-          - SUBMITTED
-          - UNDER_REVIEW
-          - NEEDS_INFO
-          - REJECTED
-          - QUOTED
+        - *id002
+        - *id003
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - SUBMITTED
+              - UNDER_REVIEW
+              - NEEDS_INFO
+              - REJECTED
+              - QUOTED
       responses:
         '200':
           description: OK
@@ -1583,13 +1589,13 @@ paths:
   /admin/custom-requests/{id}:
     get:
       tags:
-      - Admin - Requests
+        - Admin - Requests
       summary: Get request details, images and review state
       operationId: adminGetCustomRequest
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id004
+        - *id004
       responses:
         '200':
           description: OK
@@ -1618,19 +1624,19 @@ paths:
       description: Requires authenticated ADMIN session.
     patch:
       tags:
-      - Admin - Requests
+        - Admin - Requests
       summary: Start review / ask for info / reject
       operationId: adminReviewCustomRequest
-      description: 'Allowed SUBMITTED→UNDER_REVIEW, UNDER_REVIEW→NEEDS_INFO (reviewNote required), UNDER_REVIEW→REJECTED
-        (rejectionReason required). No generic QUOTED update; issue quote to reach QUOTED.
+      description: 'Allowed SUBMITTED→UNDER_REVIEW, UNDER_REVIEW→NEEDS_INFO (reviewNote required), UNDER_REVIEW→REJECTED (rejectionReason
+        required). No generic QUOTED update; issue quote to reach QUOTED.
 
 
         Requires authenticated ADMIN session.'
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id004
-      - *id001
+        - *id004
+        - *id001
       requestBody:
         required: true
         content:
@@ -1677,20 +1683,20 @@ paths:
   /admin/custom-requests/{id}/quotes:
     post:
       tags:
-      - Admin - Requests
+        - Admin - Requests
       summary: Create and send single final quote
       operationId: adminCreateQuote
-      description: 'Only UNDER_REVIEW; only one Quote per custom request (unique custom_request_id). Server computes
-        total, fixes currency and 7-day expiry, changes custom request to QUOTED in one transaction. Quote shipping is
-        priced using deliveryCity from request.
+      description: 'Only UNDER_REVIEW; only one Quote per custom request (unique custom_request_id). Server computes total,
+        fixes currency and 7-day expiry, changes custom request to QUOTED in one transaction. Quote shipping is priced using
+        deliveryCity from request.
 
 
         Requires authenticated ADMIN session.'
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id004
-      - *id001
+        - *id004
+        - *id001
       requestBody:
         required: true
         content:
@@ -1737,33 +1743,33 @@ paths:
   /admin/orders:
     get:
       tags:
-      - Admin - Orders
+        - Admin - Orders
       summary: List all orders for fulfillment
       operationId: adminListOrders
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id002
-      - *id003
-      - name: status
-        in: query
-        schema:
-          type: string
-          enum:
-          - PENDING_PAYMENT
-          - CONFIRMED
-          - IN_PROGRESS
-          - READY_FOR_DELIVERY
-          - SHIPPED
-          - DELIVERED
-          - CANCELLED
+        - *id002
+        - *id003
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - PENDING_PAYMENT
+              - CONFIRMED
+              - IN_PROGRESS
+              - READY_FOR_DELIVERY
+              - SHIPPED
+              - DELIVERED
+              - CANCELLED
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OrderList'
+                $ref: '#/components/schemas/AdminOrderList'
         '400':
           description: Invalid request
           content:
@@ -1786,20 +1792,20 @@ paths:
   /admin/orders/{id}:
     get:
       tags:
-      - Admin - Orders
+        - Admin - Orders
       summary: Get any order for fulfillment
       operationId: adminGetOrder
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id004
+        - *id004
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Order'
+                $ref: '#/components/schemas/AdminOrder'
         '401':
           description: Session missing or expired.
           content:
@@ -1821,19 +1827,18 @@ paths:
       description: Requires authenticated ADMIN session.
     patch:
       tags:
-      - Admin - Orders
+        - Admin - Orders
       summary: Advance fulfillment status
       operationId: adminAdvanceOrder
-      description: 'Only next-state transitions CONFIRMED→IN_PROGRESS→READY_FOR_DELIVERY→SHIPPED→DELIVERED. Admin cannot
-        mark payment success; payment service owns CONFIRMED. Every change writes order_status_history.
-
-
-        Requires authenticated ADMIN session.'
+      description: 'Requires ADMIN session. Normal path: CONFIRMED -> IN_PROGRESS -> READY_FOR_DELIVERY -> SHIPPED -> DELIVERED.
+        Orders with ALL IN_STOCK lines may skip IN_PROGRESS (CONFIRMED -> READY_FOR_DELIVERY); mixed and MADE_TO_ORDER orders
+        must pass IN_PROGRESS. IN_PROGRESS means preparation and/or manufacturing. Every transition records order_status_history.
+        Payment success is handled ONLY by the payment service.'
       security:
-      - sessionCookie: []
+        - sessionCookie: []
       parameters:
-      - *id004
-      - *id001
+        - *id004
+        - *id001
       requestBody:
         required: true
         content:
@@ -1846,7 +1851,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Order'
+                $ref: '#/components/schemas/AdminOrder'
         '400':
           description: Invalid request
           content:
@@ -1890,7 +1895,7 @@ components:
       name: X-CSRF-Token
       in: header
       required: true
-      description: CSRF token returned by GET /auth/csrf-token; send on POST, PATCH, DELETE requests (including OTP
+      description: CSRF token returned by GET /auth/csrf-token; send on POST, PATCH, DELETE requests (including OTP 
         endpoints). Session cookie must be included.
       schema:
         type: string
@@ -1898,8 +1903,8 @@ components:
       name: Idempotency-Key
       in: header
       required: true
-      description: 'Random UUID-like key per logical checkout/payment operation. Retry using same key and same body.
-        Scope: customer+order creation, or order+payment attempt.'
+      description: 'Random UUID-like key per logical checkout/payment operation. Retry using same key and same body. Scope:
+        customer+order creation, or order+payment attempt.'
       schema:
         type: string
         minLength: 8
@@ -1923,13 +1928,13 @@ components:
     User:
       type: object
       required:
-      - id
-      - fullName
-      - email
-      - phone
-      - role
-      - isVerified
-      - createdAt
+        - id
+        - fullName
+        - email
+        - phone
+        - role
+        - isVerified
+        - createdAt
       properties:
         id:
           type: string
@@ -1951,8 +1956,8 @@ components:
         role:
           type: string
           enum:
-          - CUSTOMER
-          - ADMIN
+            - CUSTOMER
+            - ADMIN
           readOnly: true
         isVerified:
           type: boolean
@@ -1963,8 +1968,8 @@ components:
     AuthCredentials:
       type: object
       required:
-      - email
-      - password
+        - email
+        - password
       additionalProperties: false
       properties:
         email:
@@ -1979,10 +1984,10 @@ components:
     RegisterInput:
       type: object
       required:
-      - fullName
-      - email
-      - phone
-      - password
+        - fullName
+        - email
+        - phone
+        - password
       additionalProperties: false
       properties:
         fullName:
@@ -2009,14 +2014,14 @@ components:
     AuthResponse:
       type: object
       required:
-      - user
+        - user
       properties:
         user:
           $ref: '#/components/schemas/User'
     CsrfTokenResponse:
       type: object
       required:
-      - csrfToken
+        - csrfToken
       properties:
         csrfToken:
           type: string
@@ -2024,13 +2029,13 @@ components:
     ApiError:
       type: object
       required:
-      - error
+        - error
       properties:
         error:
           type: object
           required:
-          - code
-          - message
+            - code
+            - message
           properties:
             code:
               type: string
@@ -2047,9 +2052,9 @@ components:
     Pagination:
       type: object
       required:
-      - page
-      - limit
-      - total
+        - page
+        - limit
+        - total
       properties:
         page:
           type: integer
@@ -2067,10 +2072,10 @@ components:
     Category:
       type: object
       required:
-      - id
-      - name
-      - slug
-      - isActive
+        - id
+        - name
+        - slug
+        - isActive
       properties:
         id:
           type: string
@@ -2086,8 +2091,8 @@ components:
     CreateCategoryInput:
       type: object
       required:
-      - name
-      - slug
+        - name
+        - slug
       additionalProperties: false
       properties:
         name:
@@ -2118,9 +2123,9 @@ components:
     ProductImage:
       type: object
       required:
-      - id
-      - url
-      - sortOrder
+        - id
+        - url
+        - sortOrder
       properties:
         id:
           type: string
@@ -2138,14 +2143,17 @@ components:
     ProductVariant:
       type: object
       required:
-      - id
-      - productId
-      - sku
-      - material
-      - color
-      - priceMinor
-      - currency
-      - isActive
+        - id
+        - productId
+        - sku
+        - material
+        - color
+        - priceMinor
+        - currency
+        - isActive
+        - fulfillmentMode
+        - stockQuantity
+        - isAvailable
       properties:
         id:
           type: string
@@ -2170,20 +2178,39 @@ components:
           type: string
           example: SYP
           enum:
-          - SYP
+            - SYP
           description: 'عملة واحدة: الليرة السورية الجديدة (SYP). المبالغ في أصغر وحدة؛ 100 قرش = 1 ليرة.'
         isActive:
           type: boolean
+        fulfillmentMode:
+          type: string
+          enum:
+            - IN_STOCK
+            - MADE_TO_ORDER
+          description: Ready inventory or print-on-demand, configured per variant.
+        stockQuantity:
+          type: integer
+          minimum: 0
+          description: Ready units for IN_STOCK; always 0 for MADE_TO_ORDER. This is not a reservation at checkout.
+        estimatedProductionDays:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: Required for MADE_TO_ORDER, null for IN_STOCK.
+        isAvailable:
+          type: boolean
+          description: 'Server-derived: isActive AND product.isActive AND (MADE_TO_ORDER OR stockQuantity > 0).'
     Product:
       type: object
       required:
-      - id
-      - categoryId
-      - title
-      - description
-      - isActive
-      - images
-      - variants
+        - id
+        - categoryId
+        - title
+        - description
+        - isActive
+        - images
+        - variants
+        - startingPriceMinor
       properties:
         id:
           type: string
@@ -2207,11 +2234,17 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProductVariant'
+        startingPriceMinor:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: Computed minimum priceMinor among active, available variants; null when none can be ordered. 
+            Never stored as product.price.
     CreateProductInput:
       type: object
       required:
-      - title
-      - description
+        - title
+        - description
       additionalProperties: false
       properties:
         categoryId:
@@ -2246,10 +2279,11 @@ components:
     CreateVariantInput:
       type: object
       required:
-      - sku
-      - material
-      - color
-      - priceMinor
+        - sku
+        - material
+        - color
+        - priceMinor
+        - fulfillmentMode
       additionalProperties: false
       properties:
         sku:
@@ -2270,6 +2304,27 @@ components:
         isActive:
           type: boolean
           default: true
+        fulfillmentMode:
+          type: string
+          enum:
+            - IN_STOCK
+            - MADE_TO_ORDER
+        stockQuantity:
+          type: integer
+          minimum: 0
+          default: 0
+        estimatedProductionDays:
+          type: integer
+          minimum: 1
+          nullable: true
+        estimatedUnitCostMinor:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: Admin-only estimated manufacturing cost per unit; optional and not a sale price.
+      description: 'Fulfillment is configured per variant. IN_STOCK: stockQuantity >= 0 and estimatedProductionDays must be
+        omitted/null. MADE_TO_ORDER: stockQuantity must be 0; estimatedProductionDays >= 1. Service validates cross-field
+        rules. estimatedUnitCostMinor is internal, never public.'
     UpdateVariantInput:
       type: object
       minProperties: 1
@@ -2292,6 +2347,25 @@ components:
           minimum: 0
         isActive:
           type: boolean
+        fulfillmentMode:
+          type: string
+          enum:
+            - IN_STOCK
+            - MADE_TO_ORDER
+        stockQuantity:
+          type: integer
+          minimum: 0
+        estimatedProductionDays:
+          type: integer
+          minimum: 1
+          nullable: true
+        estimatedUnitCostMinor:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: Admin-only estimated manufacturing cost per unit; optional and not a sale price.
+      description: Partial administrative edit. Server enforces fulfillment cross-field constraints after applying 
+        patch. stockQuantity is an absolute count (not a delta); checkout stock deductions are automatic and atomic.
     Measurements:
       type: object
       description: Optional dimensions in millimeters; unknown values may be omitted. Measurements are not 
@@ -2329,11 +2403,11 @@ components:
     RequestAttachment:
       type: object
       required:
-      - id
-      - fileName
-      - mimeType
-      - sizeBytes
-      - contentUrl
+        - id
+        - fileName
+        - mimeType
+        - sizeBytes
+        - contentUrl
       properties:
         id:
           type: string
@@ -2343,9 +2417,9 @@ components:
         mimeType:
           type: string
           enum:
-          - image/jpeg
-          - image/png
-          - image/webp
+            - image/jpeg
+            - image/png
+            - image/webp
         sizeBytes:
           type: integer
           minimum: 1
@@ -2355,18 +2429,18 @@ components:
     CustomRequest:
       type: object
       required:
-      - id
-      - customerId
-      - type
-      - title
-      - description
-      - quantity
-      - usageContext
-      - deliveryCity
-      - status
-      - attachments
-      - createdAt
-      - updatedAt
+        - id
+        - customerId
+        - type
+        - title
+        - description
+        - quantity
+        - usageContext
+        - deliveryCity
+        - status
+        - attachments
+        - createdAt
+        - updatedAt
       properties:
         id:
           type: string
@@ -2377,8 +2451,8 @@ components:
         type:
           type: string
           enum:
-          - BROKEN_PART
-          - FROM_IMAGE
+            - BROKEN_PART
+            - FROM_IMAGE
         title:
           type: string
         description:
@@ -2405,11 +2479,11 @@ components:
         status:
           type: string
           enum:
-          - SUBMITTED
-          - UNDER_REVIEW
-          - NEEDS_INFO
-          - REJECTED
-          - QUOTED
+            - SUBMITTED
+            - UNDER_REVIEW
+            - NEEDS_INFO
+            - REJECTED
+            - QUOTED
         reviewNote:
           type: string
           nullable: true
@@ -2434,19 +2508,19 @@ components:
     CreateCustomMultipart:
       type: object
       required:
-      - type
-      - title
-      - description
-      - quantity
-      - usageContext
-      - deliveryCity
-      - photos
+        - type
+        - title
+        - description
+        - quantity
+        - usageContext
+        - deliveryCity
+        - photos
       properties:
         type:
           type: string
           enum:
-          - BROKEN_PART
-          - FROM_IMAGE
+            - BROKEN_PART
+            - FROM_IMAGE
         title:
           type: string
           minLength: 3
@@ -2479,8 +2553,8 @@ components:
           maxLength: 120
         measurementsJson:
           type: string
-          description: Optional JSON string conforming to Measurements schema (multipart text field). All 
-            dimensions in mm.
+          description: Optional JSON string conforming to Measurements schema (multipart text field). All dimensions in 
+            mm.
           example: '{"lengthMm":45,"widthMm":22,"notes":"hole center uncertain"}'
         photos:
           type: array
@@ -2493,12 +2567,12 @@ components:
     ResubmitCustomMultipart:
       type: object
       required:
-      - status
+        - status
       properties:
         status:
           type: string
           enum:
-          - SUBMITTED
+            - SUBMITTED
           description: Atomic resubmission from NEEDS_INFO; only customer owner.
         title:
           type: string
@@ -2549,24 +2623,24 @@ components:
     AdminStartReviewInput:
       type: object
       required:
-      - status
+        - status
       additionalProperties: false
       properties:
         status:
           type: string
           enum:
-          - UNDER_REVIEW
+            - UNDER_REVIEW
     AdminNeedsInfoInput:
       type: object
       required:
-      - status
-      - reviewNote
+        - status
+        - reviewNote
       additionalProperties: false
       properties:
         status:
           type: string
           enum:
-          - NEEDS_INFO
+            - NEEDS_INFO
         reviewNote:
           type: string
           minLength: 5
@@ -2574,23 +2648,23 @@ components:
     AdminRejectInput:
       type: object
       required:
-      - status
-      - rejectionReason
+        - status
+        - rejectionReason
       additionalProperties: false
       properties:
         status:
           type: string
           enum:
-          - REJECTED
+            - REJECTED
         rejectionReason:
           type: string
           minLength: 5
           maxLength: 2000
     AdminReviewInput:
       oneOf:
-      - $ref: '#/components/schemas/AdminStartReviewInput'
-      - $ref: '#/components/schemas/AdminNeedsInfoInput'
-      - $ref: '#/components/schemas/AdminRejectInput'
+        - $ref: '#/components/schemas/AdminStartReviewInput'
+        - $ref: '#/components/schemas/AdminNeedsInfoInput'
+        - $ref: '#/components/schemas/AdminRejectInput'
       discriminator:
         propertyName: status
         mapping:
@@ -2600,20 +2674,20 @@ components:
     Quote:
       type: object
       required:
-      - id
-      - customRequestId
-      - preparedByAdminId
-      - quantity
-      - material
-      - designFeeMinor
-      - unitPriceMinor
-      - shippingFeeMinor
-      - totalMinor
-      - currency
-      - estimatedProductionDays
-      - status
-      - expiresAt
-      - createdAt
+        - id
+        - customRequestId
+        - preparedByAdminId
+        - quantity
+        - material
+        - designFeeMinor
+        - unitPriceMinor
+        - shippingFeeMinor
+        - totalMinor
+        - currency
+        - estimatedProductionDays
+        - status
+        - expiresAt
+        - createdAt
       properties:
         id:
           type: string
@@ -2651,7 +2725,7 @@ components:
           type: string
           example: SYP
           enum:
-          - SYP
+            - SYP
           description: 'عملة واحدة: الليرة السورية الجديدة (SYP). المبالغ في أصغر وحدة؛ 100 قرش = 1 ليرة.'
         estimatedProductionDays:
           type: integer
@@ -2663,27 +2737,26 @@ components:
         status:
           type: string
           enum:
-          - SENT
-          - ACCEPTED
-          - DECLINED
-          - EXPIRED
+            - SENT
+            - ACCEPTED
+            - DECLINED
+            - EXPIRED
         expiresAt:
           type: string
           format: date-time
-          description: Always exactly seven days after issue; server checks at acceptance regardless of stored 
-            status.
+          description: Always exactly seven days after issue; server checks at acceptance regardless of stored status.
         createdAt:
           type: string
           format: date-time
     CreateQuoteInput:
       type: object
       required:
-      - quantity
-      - material
-      - designFeeMinor
-      - unitPriceMinor
-      - shippingFeeMinor
-      - estimatedProductionDays
+        - quantity
+        - material
+        - designFeeMinor
+        - unitPriceMinor
+        - shippingFeeMinor
+        - estimatedProductionDays
       additionalProperties: false
       properties:
         quantity:
@@ -2713,10 +2786,10 @@ components:
     Address:
       type: object
       required:
-      - fullName
-      - phone
-      - city
-      - street
+        - fullName
+        - phone
+        - city
+        - street
       additionalProperties: false
       properties:
         fullName:
@@ -2747,30 +2820,30 @@ components:
     AcceptQuoteInput:
       type: object
       required:
-      - status
-      - shippingAddress
+        - status
+        - shippingAddress
       additionalProperties: false
       properties:
         status:
           type: string
           enum:
-          - ACCEPTED
+            - ACCEPTED
         shippingAddress:
           $ref: '#/components/schemas/Address'
     DeclineQuoteInput:
       type: object
       required:
-      - status
+        - status
       additionalProperties: false
       properties:
         status:
           type: string
           enum:
-          - DECLINED
+            - DECLINED
     QuoteDecisionInput:
       oneOf:
-      - $ref: '#/components/schemas/AcceptQuoteInput'
-      - $ref: '#/components/schemas/DeclineQuoteInput'
+        - $ref: '#/components/schemas/AcceptQuoteInput'
+        - $ref: '#/components/schemas/DeclineQuoteInput'
       discriminator:
         propertyName: status
         mapping:
@@ -2779,29 +2852,30 @@ components:
     QuoteDecisionResponse:
       type: object
       required:
-      - quote
-      - order
+        - quote
+        - order
       properties:
         quote:
           $ref: '#/components/schemas/Quote'
         order:
           type: object
           allOf:
-          - $ref: '#/components/schemas/Order'
+            - $ref: '#/components/schemas/Order'
           nullable: true
           description: Order created/reused for ACCEPTED, null for DECLINED.
     OrderItem:
       type: object
       required:
-      - id
-      - orderId
-      - sourceType
-      - titleSnapshot
-      - quantity
-      - unitPriceMinor
-      - designFeeMinor
-      - lineTotalMinor
-      - reviewed
+        - id
+        - orderId
+        - sourceType
+        - titleSnapshot
+        - quantity
+        - unitPriceMinor
+        - designFeeMinor
+        - lineTotalMinor
+        - reviewed
+        - fulfillmentModeSnapshot
       properties:
         id:
           type: string
@@ -2812,8 +2886,8 @@ components:
         sourceType:
           type: string
           enum:
-          - CATALOG
-          - CUSTOM
+            - CATALOG
+            - CUSTOM
         productVariantId:
           type: string
           format: uuid
@@ -2847,21 +2921,32 @@ components:
         reviewed:
           type: boolean
           description: Whether a review has been submitted for this item.
+        fulfillmentModeSnapshot:
+          type: string
+          enum:
+            - IN_STOCK
+            - MADE_TO_ORDER
+          description: Mode at order creation. CUSTOM quote items always MADE_TO_ORDER. Immutable after checkout.
+        estimatedProductionDaysSnapshot:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: Original production lead time for the purchased line; null for IN_STOCK.
     Order:
       type: object
       required:
-      - id
-      - customerId
-      - source
-      - status
-      - items
-      - shippingAddress
-      - subtotalMinor
-      - shippingFeeMinor
-      - totalMinor
-      - currency
-      - createdAt
-      - updatedAt
+        - id
+        - customerId
+        - source
+        - status
+        - items
+        - shippingAddress
+        - subtotalMinor
+        - shippingFeeMinor
+        - totalMinor
+        - currency
+        - createdAt
+        - updatedAt
       properties:
         id:
           type: string
@@ -2872,18 +2957,18 @@ components:
         source:
           type: string
           enum:
-          - CATALOG
-          - CUSTOM
+            - CATALOG
+            - CUSTOM
         status:
           type: string
           enum:
-          - PENDING_PAYMENT
-          - CONFIRMED
-          - IN_PROGRESS
-          - READY_FOR_DELIVERY
-          - SHIPPED
-          - DELIVERED
-          - CANCELLED
+            - PENDING_PAYMENT
+            - CONFIRMED
+            - IN_PROGRESS
+            - READY_FOR_DELIVERY
+            - SHIPPED
+            - DELIVERED
+            - CANCELLED
         items:
           type: array
           minItems: 1
@@ -2906,7 +2991,7 @@ components:
           type: string
           example: SYP
           enum:
-          - SYP
+            - SYP
           description: 'عملة واحدة: الليرة السورية الجديدة (SYP). المبالغ في أصغر وحدة؛ 100 قرش = 1 ليرة.'
         trackingNumber:
           type: string
@@ -2923,8 +3008,8 @@ components:
     CatalogCheckoutItem:
       type: object
       required:
-      - variantId
-      - quantity
+        - variantId
+        - quantity
       additionalProperties: false
       properties:
         variantId:
@@ -2937,42 +3022,46 @@ components:
     CreateCatalogOrderInput:
       type: object
       required:
-      - items
-      - shippingAddress
+        - items
+        - shippingAddress
       additionalProperties: false
       properties:
         items:
           type: array
           minItems: 1
           maxItems: 30
-          uniqueItems: true
           items:
             $ref: '#/components/schemas/CatalogCheckoutItem'
+          description: Each variantId must occur at most once. Enforced by application validation (uniqueItems cannot 
+            enforce uniqueness by one object property).
         shippingAddress:
           $ref: '#/components/schemas/Address'
+      description: Browser cart payload. Duplicate variantIds are rejected with 400 even if uniqueItems (whole-object 
+        uniqueness) does not detect them. No client prices. IN_STOCK availability is checked here but stock is NOT 
+        reserved; it is rechecked and deducted atomically on successful mock payment.
     CancelOrderInput:
       type: object
       required:
-      - status
+        - status
       additionalProperties: false
       properties:
         status:
           type: string
           enum:
-          - CANCELLED
+            - CANCELLED
     AdminOrderStatusInput:
       type: object
       required:
-      - status
+        - status
       additionalProperties: false
       properties:
         status:
           type: string
           enum:
-          - IN_PROGRESS
-          - READY_FOR_DELIVERY
-          - SHIPPED
-          - DELIVERED
+            - IN_PROGRESS
+            - READY_FOR_DELIVERY
+            - SHIPPED
+            - DELIVERED
         carrier:
           type: string
           maxLength: 100
@@ -2984,12 +3073,12 @@ components:
     PaymentAttempt:
       type: object
       required:
-      - id
-      - orderId
-      - status
-      - amountMinor
-      - currency
-      - createdAt
+        - id
+        - orderId
+        - status
+        - amountMinor
+        - currency
+        - createdAt
       properties:
         id:
           type: string
@@ -3000,41 +3089,43 @@ components:
         status:
           type: string
           enum:
-          - SUCCEEDED
-          - FAILED
+            - SUCCEEDED
+            - FAILED
         amountMinor:
           type: integer
           minimum: 0
         currency:
           type: string
           enum:
-          - SYP
+            - SYP
           example: SYP
           description: 'عملة واحدة: الليرة السورية الجديدة (SYP). المبالغ في أصغر وحدة؛ 100 قرش = 1 ليرة.'
         failureReason:
           type: string
           nullable: true
+          description: 'For a simulated failure: SIMULATED_FAILURE. Out-of-stock at payment is reported as HTTP 409 and does
+            not create an attempt.'
         createdAt:
           type: string
           format: date-time
     MockPaymentInput:
       type: object
       required:
-      - testScenario
+        - testScenario
       additionalProperties: false
       properties:
         testScenario:
           type: string
           enum:
-          - SUCCESS
-          - FAILURE
-          description: Demo-only simulation hint; backend validates and creates the outcome. No card details or 
-            real transfer.
+            - SUCCESS
+            - FAILURE
+          description: Demo-only control. SUCCESS can still return HTTP 409 if inventory is insufficient; no real 
+            charge.
     PaymentAttemptResult:
       type: object
       required:
-      - attempt
-      - order
+        - attempt
+        - order
       properties:
         attempt:
           $ref: '#/components/schemas/PaymentAttempt'
@@ -3043,10 +3134,10 @@ components:
     OrderStatusHistory:
       type: object
       required:
-      - id
-      - orderId
-      - toStatus
-      - changedAt
+        - id
+        - orderId
+        - toStatus
+        - changedAt
       properties:
         id:
           type: string
@@ -3060,13 +3151,13 @@ components:
         toStatus:
           type: string
           enum:
-          - PENDING_PAYMENT
-          - CONFIRMED
-          - IN_PROGRESS
-          - READY_FOR_DELIVERY
-          - SHIPPED
-          - DELIVERED
-          - CANCELLED
+            - PENDING_PAYMENT
+            - CONFIRMED
+            - IN_PROGRESS
+            - READY_FOR_DELIVERY
+            - SHIPPED
+            - DELIVERED
+            - CANCELLED
         changedByUserId:
           type: string
           format: uuid
@@ -3077,11 +3168,11 @@ components:
     OrderItemReview:
       type: object
       required:
-      - id
-      - orderItemId
-      - customerId
-      - rating
-      - createdAt
+        - id
+        - orderItemId
+        - customerId
+        - rating
+        - createdAt
       properties:
         id:
           type: string
@@ -3105,7 +3196,7 @@ components:
     CreateReviewInput:
       type: object
       required:
-      - rating
+        - rating
       additionalProperties: false
       properties:
         rating:
@@ -3118,7 +3209,7 @@ components:
     CategoryList:
       type: object
       required:
-      - data
+        - data
       properties:
         data:
           type: array
@@ -3127,8 +3218,8 @@ components:
     ProductList:
       type: object
       required:
-      - data
-      - pagination
+        - data
+        - pagination
       properties:
         data:
           type: array
@@ -3139,8 +3230,8 @@ components:
     CustomRequestList:
       type: object
       required:
-      - data
-      - pagination
+        - data
+        - pagination
       properties:
         data:
           type: array
@@ -3151,8 +3242,8 @@ components:
     OrderList:
       type: object
       required:
-      - data
-      - pagination
+        - data
+        - pagination
       properties:
         data:
           type: array
@@ -3163,7 +3254,7 @@ components:
     PaymentAttemptList:
       type: object
       required:
-      - data
+        - data
       properties:
         data:
           type: array
@@ -3172,9 +3263,9 @@ components:
     PublicReview:
       type: object
       required:
-      - id
-      - rating
-      - createdAt
+        - id
+        - rating
+        - createdAt
       properties:
         id:
           type: string
@@ -3192,8 +3283,8 @@ components:
     ReviewList:
       type: object
       required:
-      - data
-      - pagination
+        - data
+        - pagination
       properties:
         data:
           type: array
@@ -3204,7 +3295,7 @@ components:
     ProductImageUpload:
       type: object
       required:
-      - image
+        - image
       properties:
         image:
           type: string
@@ -3219,8 +3310,8 @@ components:
       type: object
       additionalProperties: false
       required:
-      - email
-      - otpCode
+        - email
+        - otpCode
       properties:
         email:
           type: string
@@ -3234,7 +3325,7 @@ components:
       type: object
       additionalProperties: false
       required:
-      - email
+        - email
       properties:
         email:
           type: string
@@ -3242,8 +3333,84 @@ components:
     OtpMessageResponse:
       type: object
       required:
-      - message
+        - message
       properties:
         message:
           type: string
           example: تم تفعيل الحساب بنجاح.
+    AdminProductVariant:
+      allOf:
+        - $ref: '#/components/schemas/ProductVariant'
+        - type: object
+          required:
+            - estimatedUnitCostMinor
+          properties:
+            estimatedUnitCostMinor:
+              type: integer
+              minimum: 0
+              nullable: true
+              description: Internal estimate, never present in public ProductVariant.
+      description: ADMIN ONLY. Public fields plus internal cost estimate.
+    AdminProduct:
+      allOf:
+        - $ref: '#/components/schemas/Product'
+        - type: object
+          required:
+            - variants
+          properties:
+            variants:
+              type: array
+              items:
+                $ref: '#/components/schemas/AdminProductVariant'
+      description: ADMIN ONLY. Same product plus variants with internal costs.
+    AdminProductList:
+      type: object
+      required:
+        - data
+        - pagination
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminProduct'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+    AdminOrderItem:
+      allOf:
+        - $ref: '#/components/schemas/OrderItem'
+        - type: object
+          required:
+            - estimatedUnitCostSnapshotMinor
+          properties:
+            estimatedUnitCostSnapshotMinor:
+              type: integer
+              minimum: 0
+              nullable: true
+              description: Internal per-unit cost estimate copied from variant at checkout. May be null for custom or 
+                unknown costs.
+      description: ADMIN ONLY item with estimated cost snapshot.
+    AdminOrder:
+      allOf:
+        - $ref: '#/components/schemas/Order'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              minItems: 1
+              items:
+                $ref: '#/components/schemas/AdminOrderItem'
+      description: ADMIN ONLY order view with internal item cost estimates.
+    AdminOrderList:
+      type: object
+      required:
+        - data
+        - pagination
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminOrder'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
