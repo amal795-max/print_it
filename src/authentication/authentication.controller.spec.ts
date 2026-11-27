@@ -32,9 +32,15 @@ describe('AuthenticationController', () => {
       password: 'Str0ng!Pass',
       role: UserRole.CUSTOMER,
     };
-    authenticationService.register.mockResolvedValue({ id: '1' });
+    authenticationService.register.mockResolvedValue({
+      message: 'Registration successful. An OTP has been sent to your email.',
+      email: dto.email,
+    });
 
-    await expect(controller.register(dto)).resolves.toEqual({ id: '1' });
+    await expect(controller.register(dto)).resolves.toEqual({
+      message: 'Registration successful. An OTP has been sent to your email.',
+      email: dto.email,
+    });
     expect(authenticationService.register).toHaveBeenCalledWith(dto);
   });
 });

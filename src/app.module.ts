@@ -1,12 +1,12 @@
+import { MailerModule } from '@nestjs-modules/mailer';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AppController } from './app.controller.js';
-import { AppService } from './app.service.js';
 import { AuthenticationModule } from './authentication/authentication.module.js';
 import { databaseConfig } from './config/database.config.js';
+import { mailConfig } from './config/mail.config.js';
 
 @Module({
   imports: [
@@ -25,11 +25,13 @@ import { databaseConfig } from './config/database.config.js';
       inject: [ConfigService],
       useFactory: databaseConfig,
     }),
+    MailerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: mailConfig,
+    }),
     AuthenticationModule,
   ],
-  controllers: [AppController],
   providers: [
-    AppService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,

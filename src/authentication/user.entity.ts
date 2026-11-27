@@ -29,6 +29,12 @@ export class User {
   @Column({ default: false })
   isVerified!: boolean;
 
+  @Column({ type: 'varchar', nullable: true, select: false })
+  otp!: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  otpExpiresAt!: Date | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 }

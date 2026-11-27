@@ -425,17 +425,78 @@ paths:
           application/json:
             schema:
               type: object
-              required: [email, otpCode]
+              required: [email, otp]
               properties:
                 email:
                   type: string
                   format: email
-                otpCode:
+                otp:
                   type: string
+                  pattern: '^\d{6}$'
                   example: "482910"
       responses:
         '200':
           description: Account activated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Email verified successfully
+        '400':
+          description: Invalid or expired OTP
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/resend-otp:
+    post:
+      tags: [Auth]
+      summary: Resend a new OTP to an unverified email address
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+      responses:
+        '200':
+          description: A new OTP was generated and sent to the email address.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: A new OTP has been sent to your email
+        '400':
+          description: Email is already verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: The verification email could not be sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /auth/login:
     post:

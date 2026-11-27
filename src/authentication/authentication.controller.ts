@@ -16,6 +16,8 @@ import type { SessionUser } from '../common/interfaces/session.interface.js';
 import { AuthenticationService } from './authentication.service.js';
 import { LoginDto } from './dto/login.dto.js';
 import { RegisterDto } from './dto/register.dto.js';
+import { ResendOtpDto } from './dto/resend-otp.dto.js';
+import { VerifyOtpDto } from './dto/verify-otp.dto.js';
 import { AuthGuard } from './guards/auth.guard.js';
 
 @Controller('auth')
@@ -27,6 +29,20 @@ export class AuthenticationController {
   @HttpCode(HttpStatus.CREATED)
   register(@Body() dto: RegisterDto) {
     return this.authenticationService.register(dto);
+  }
+
+  @Post('verify-otp')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @HttpCode(HttpStatus.OK)
+  verifyOtp(@Body() dto: VerifyOtpDto) {
+    return this.authenticationService.verifyOtp(dto);
+  }
+
+  @Post('resend-otp')
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @HttpCode(HttpStatus.OK)
+  resendOtp(@Body() dto: ResendOtpDto) {
+    return this.authenticationService.resendOtp(dto);
   }
 
   @Post('login')

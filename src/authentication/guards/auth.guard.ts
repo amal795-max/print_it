@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -19,6 +20,10 @@ export class AuthGuard implements CanActivate {
 
     if (!sessionUser?.id) {
       throw new UnauthorizedException('Authentication required');
+    }
+
+    if (!sessionUser.isVerified) {
+      throw new ForbiddenException('Email is not verified');
     }
 
     request.user = sessionUser;

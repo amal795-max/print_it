@@ -48,6 +48,46 @@ export class UsersService {
   }
 
   /**
+   * Stores a hashed OTP and its expiry for the given user.
+   */
+  async saveOtp(
+    userId: string,
+    otpHash: string,
+    otpExpiresAt: Date,
+  ): Promise<void> {
+    await this.userRepository.update(userId, { otp: otpHash, otpExpiresAt });
+  }
+
+  /**
+   * Loads a user by email including the OTP hash.
+   */
+  async findByEmailWithOtp(email: string): Promise<User | null> {
+    return this.userRepository
+      .createQueryBuilder('user')
+      .addSelect('user.otp')
+      .where('user.email = :email', { email })
+      .getOne();
+  }
+
+  /**
+   * Loads a user by email without secret columns.
+   */
+  async findByEmail(email: string): Promise<User | null> {
+    return this.userRepository.findOne({ where: { email } });
+  }
+
+  /**
+   * Marks the user verified and clears the OTP.
+   */
+  async markVerified(userId: string): Promise<void> {
+    await this.userRepository.update(userId, {
+      isVerified: true,
+      otp: null,
+      otpExpiresAt: null,
+    });
+  }
+
+  /**
    * Loads a user by email including the password hash for credential checks.
    */
   async findByEmailWithPassword(email: string): Promise<User | null> {

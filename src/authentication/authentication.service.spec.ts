@@ -1,7 +1,8 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Request } from 'express';
 import { AuthenticationService } from './authentication.service.js';
+import type { OtpService } from './otp/otp.service.js';
 import { UserRole } from './roles/user-role.enum.js';
 import type { UsersService } from './users.service.js';
 import type { User } from './user.entity.js';
@@ -15,6 +16,11 @@ describe('AuthenticationService', () => {
     findByIdOrFail: ReturnType<typeof vi.fn>;
     findAll: ReturnType<typeof vi.fn>;
   };
+  let otpService: {
+    issueForUser: ReturnType<typeof vi.fn>;
+    verify: ReturnType<typeof vi.fn>;
+    resend: ReturnType<typeof vi.fn>;
+  };
 
   const sampleUser = {
     id: '11111111-1111-1111-1111-111111111111',
@@ -23,7 +29,9 @@ describe('AuthenticationService', () => {
     phone: '+14155552671',
     passwordHash: 'hashed',
     role: UserRole.CUSTOMER,
-    isVerified: false,
+    isVerified: true,
+    otp: null,
+    otpExpiresAt: null,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
   } as User;
 
@@ -35,13 +43,19 @@ describe('AuthenticationService', () => {
       findByIdOrFail: vi.fn(),
       findAll: vi.fn(),
     };
+    otpService = {
+      issueForUser: vi.fn(),
+      verify: vi.fn(),
+      resend: vi.fn(),
+    };
     service = new AuthenticationService(
       usersService as unknown as UsersService,
+      otpService as unknown as OtpService,
     );
   });
 
-  it('registers a user without exposing passwordHash', async () => {
-    usersService.create.mockResolvedValue(sampleUser);
+  it('registers a user and delegates OTP issuance', async () => {
+    usersService.create.mockResolvedValue({ ...sampleUser, isVerified: false });
 
     const dto = {
       fullName: sampleUser.fullName,
@@ -53,16 +67,15 @@ describe('AuthenticationService', () => {
     const result = await service.register(dto);
 
     expect(usersService.create).toHaveBeenCalledWith(dto);
-    expect(result).toMatchObject({
-      id: sampleUser.id,
-      fullName: sampleUser.fullName,
+    expect(otpService.issueForUser).toHaveBeenCalledOnce();
+    expect(result).toEqual({
+      message:
+        'Registration successful. An OTP has been sent to your email.',
       email: sampleUser.email,
-      phone: sampleUser.phone,
     });
-    expect(result).not.toHaveProperty('passwordHash');
   });
 
-  it('logs in, regenerates the session, and stores the user', async () => {
+  it('logs in a verified user and stores the session', async () => {
     usersService.findByEmailWithPassword.mockResolvedValue(sampleUser);
     usersService.validatePassword.mockResolvedValue(true);
 
@@ -79,15 +92,28 @@ describe('AuthenticationService', () => {
     );
 
     expect(request.session.regenerate).toHaveBeenCalled();
-    expect(request.session.user).toEqual({
-      id: sampleUser.id,
-      fullName: sampleUser.fullName,
-      email: sampleUser.email,
-      phone: sampleUser.phone,
-      role: sampleUser.role,
-      isVerified: sampleUser.isVerified,
-    });
+    expect(request.session.user?.isVerified).toBe(true);
     expect(result.id).toBe(sampleUser.id);
+  });
+
+  it('rejects login when the email is not verified', async () => {
+    usersService.findByEmailWithPassword.mockResolvedValue({
+      ...sampleUser,
+      isVerified: false,
+    });
+    usersService.validatePassword.mockResolvedValue(true);
+
+    const request = {
+      session: { regenerate: vi.fn() },
+    } as unknown as Request;
+
+    await expect(
+      service.login(
+        { email: sampleUser.email, password: 'Str0ng!Pass' },
+        request,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(request.session.regenerate).not.toHaveBeenCalled();
   });
 
   it('rejects invalid credentials with a generic message', async () => {

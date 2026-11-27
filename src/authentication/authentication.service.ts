@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   Injectable,
   Logger,
   UnauthorizedException,
@@ -7,21 +8,56 @@ import type { Request } from 'express';
 import type { SessionUser } from '../common/interfaces/session.interface.js';
 import { LoginDto } from './dto/login.dto.js';
 import { RegisterDto } from './dto/register.dto.js';
+import { ResendOtpDto } from './dto/resend-otp.dto.js';
+import { VerifyOtpDto } from './dto/verify-otp.dto.js';
+import { OtpService } from './otp/otp.service.js';
 import { User } from './user.entity.js';
 import { UsersService } from './users.service.js';
+
+type PublicUser = Omit<User, 'passwordHash' | 'otp' | 'otpExpiresAt'>;
+
+export interface AuthMessage {
+  message: string;
+}
+
+export interface RegisterResult extends AuthMessage {
+  email: string;
+}
 
 @Injectable()
 export class AuthenticationService {
   private readonly logger = new Logger(AuthenticationService.name);
 
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly otpService: OtpService,
+  ) {}
 
   /**
-   * Registers a new user without creating a session.
+   * Registers a user and triggers OTP email verification.
    */
-  async register(dto: RegisterDto): Promise<Omit<User, 'passwordHash'>> {
+  async register(dto: RegisterDto): Promise<RegisterResult> {
     const user = await this.usersService.create(dto);
-    return this.toPublicUser(user);
+    await this.otpService.issueForUser(user);
+    return {
+      message:
+        'Registration successful. An OTP has been sent to your email.',
+      email: user.email,
+    };
+  }
+
+  /**
+   * Verifies a registration OTP.
+   */
+  async verifyOtp(dto: VerifyOtpDto): Promise<AuthMessage> {
+    return this.otpService.verify(dto);
+  }
+
+  /**
+   * Resends a registration OTP.
+   */
+  async resendOtp(dto: ResendOtpDto): Promise<AuthMessage> {
+    return this.otpService.resend(dto);
   }
 
   /**
@@ -35,6 +71,12 @@ export class AuthenticationService {
 
     if (!valid || !user) {
       throw new UnauthorizedException('Invalid credentials');
+    }
+
+    if (!user.isVerified) {
+      throw new ForbiddenException(
+        'Email is not verified. Complete OTP verification first.',
+      );
     }
 
     await this.regenerateSession(request);
@@ -64,7 +106,7 @@ export class AuthenticationService {
   /**
    * Returns the current authenticated user from the database.
    */
-  async me(sessionUser: SessionUser): Promise<Omit<User, 'passwordHash'>> {
+  async me(sessionUser: SessionUser): Promise<PublicUser> {
     const user = await this.usersService.findByIdOrFail(sessionUser.id);
     return this.toPublicUser(user);
   }
@@ -72,7 +114,7 @@ export class AuthenticationService {
   /**
    * Lists all users for admin endpoints.
    */
-  async findAllUsers(): Promise<Omit<User, 'passwordHash'>[]> {
+  async findAllUsers(): Promise<PublicUser[]> {
     const users = await this.usersService.findAll();
     return users.map((user) => this.toPublicUser(user));
   }
@@ -88,8 +130,13 @@ export class AuthenticationService {
     };
   }
 
-  private toPublicUser(user: User): Omit<User, 'passwordHash'> {
-    const { passwordHash: _passwordHash, ...publicUser } = user;
+  private toPublicUser(user: User): PublicUser {
+    const {
+      passwordHash: _passwordHash,
+      otp: _otp,
+      otpExpiresAt: _otpExpiresAt,
+      ...publicUser
+    } = user;
     return publicUser;
   }
 
