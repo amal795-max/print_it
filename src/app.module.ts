@@ -1,23 +1,41 @@
+import { MailerModule } from '@nestjs-modules/mailer';
 import { Module } from '@nestjs/common';
-import { createObserveModule } from '@nestjs/observe';
-import { AppController } from './app.controller.js';
-import { AppService } from './app.service.js';
-import { AuthenticationModule } from './authentication/authentication.module.js';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigService } from '@nestjs/config';
+import { AuthenticationModule } from './authentication/authentication.module.js';
 import { databaseConfig } from './config/database.config.js';
-
+import { mailConfig } from './config/mail.config.js';
 
 @Module({
   imports: [
-     TypeOrmModule.forRootAsync({
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ['.env'],
+    }),
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        ttl: 60_000,
+        limit: 100,
+      },
+    ]),
+    TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: databaseConfig,
-    }), 
+    }),
+    MailerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: mailConfig,
+    }),
     AuthenticationModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}
-

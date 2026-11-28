@@ -1,0 +1,883 @@
+openapi: 3.0.3
+info:
+  title: Print It API
+  description: |
+    RESTful API for a 3D-printing platform for small parts and household replacement components.
+    The specification covers authentication, the ready-parts catalog, image and measurement uploads for quoting, the "Design a Part for Me" service, printing materials, and order tracking.
+  version: 1.0.0
+  contact:
+    name: Backend Team - Missing Piece
+
+servers:
+  - url: /api
+    description: Current server (local or public tunnel)
+  - url: https://api.missingpiece.example.com/v1
+    description: Production Server
+
+tags:
+  - name: Auth
+    description: Sign in, account creation, session management, and permissions
+  - name: Users & Roles
+    description: Profile management for customers and administrators
+  - name: Catalog (Ready Parts)
+    description: Ready-parts catalog (handles, buttons, bases, covers)
+  - name: Materials & Colors
+    description: Available printing materials (rigid, flexible, heat-resistant) and colors
+  - name: Custom & Broken Parts
+    description: Upload broken-part photos and measurements, and use the "Design a Part for Me" service
+  - name: Orders & Tracking
+    description: Create orders, get instant pricing, and track printing and delivery stages
+
+components:
+  securitySchemes:
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Session cookie set by the server after successful sign-in
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, details]
+          properties:
+            code:
+              type: string
+              example: VALIDATION_ERROR
+            message:
+              type: string
+              example: Validation failed
+            details:
+              type: array
+              items:
+                type: object
+                required: [field, message]
+                properties:
+                  field:
+                    type: string
+                    example: email
+                  message:
+                    type: string
+                    example: Invalid email
+      example:
+        error:
+          code: VALIDATION_ERROR
+          message: Validation failed
+          details:
+            - field: email
+              message: Invalid email
+
+    UserRole:
+      type: string
+      enum: [CUSTOMER, ADMIN]
+      example: CUSTOMER
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        fullName:
+          type: string
+          example: "Ahmed Mahmoud"
+        email:
+          type: string
+          format: email
+          example: "ahmed@example.com"
+        phone:
+          type: string
+          example: "+963912345678"
+        role:
+          $ref: '#/components/schemas/UserRole'
+        isVerified:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+
+    AuthResponse:
+      type: object
+      description: Session credentials are stored in an HTTP cookie and are not returned in the response body.
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+
+    Material:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "ABS - heat- and pressure-resistant"
+        type:
+          type: string
+          enum: [RIGID, FLEXIBLE, HEAT_RESISTANT]
+          example: HEAT_RESISTANT
+        pricePerGram:
+          type: number
+          format: float
+          example: 0.15
+        availableColors:
+          type: array
+          items:
+            type: string
+          example: ["#FFFFFF", "#000000", "#808080"]
+
+    ReadyPart:
+      type: object
+      example:
+        id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        title: "Automatic washing-machine door handle"
+        category: HANDLES
+        description: string
+        material:
+          id: "b2b02cee-238a-4f37-9c60-54d8e6d542d1"
+          name: PLA
+          type: RIGID
+          pricePerGram: 0.15
+        color: "#000000"
+        availableColors: ["#FFFFFF", "#000000"]
+        compatibleBrands: ["LG"]
+        compatibleModels: ["F4J6VY2W"]
+        dimensionsMm:
+          length: 0
+          width: 0
+          height: 0
+        weightGrams: 24.5
+        inStock: true
+        basePrice: 12.5
+        estimatedDays: 3
+        previewImages: ["string"]
+        model3dUrl: string
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: "Automatic washing-machine door handle"
+        category:
+          type: string
+          enum: [HANDLES, BUTTONS, BASES, COVERS, OTHER]
+          example: HANDLES
+        description:
+          type: string
+        material:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+              example: PLA
+            type:
+              type: string
+              enum: [RIGID, FLEXIBLE, HEAT_RESISTANT]
+              example: RIGID
+            pricePerGram:
+              type: number
+              format: float
+              example: 0.15
+        color:
+          type: string
+          description: The selected color of this part.
+          example: "#000000"
+        availableColors:
+          type: array
+          description: Colors available for this part.
+          items:
+            type: string
+          example: ["#FFFFFF", "#000000"]
+        compatibleBrands:
+          type: array
+          items:
+            type: string
+          example: ["LG"]
+        compatibleModels:
+          type: array
+          items:
+            type: string
+          example: ["F4J6VY2W"]
+        dimensionsMm:
+          type: object
+          properties:
+            length:
+              type: number
+            width:
+              type: number
+            height:
+              type: number
+        weightGrams:
+          type: number
+          format: float
+          description: Part weight in grams.
+          example: 24.5
+        inStock:
+          type: boolean
+          description: Whether this part is currently available in stock.
+          example: true
+        basePrice:
+          type: number
+          format: float
+          example: 12.50
+        estimatedDays:
+          type: integer
+          example: 3
+        previewImages:
+          type: array
+          items:
+            type: string
+            format: uri
+        model3dUrl:
+          type: string
+          format: uri
+          nullable: true
+
+    CustomPartRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        requestType:
+          type: string
+          enum: [BROKEN_PART_SCAN, DESIGN_FROM_IDEA]
+          example: BROKEN_PART_SCAN
+        deviceCategory:
+          type: string
+          example: "Washing machine / fan"
+        description:
+          type: string
+        measurements:
+          type: object
+          properties:
+            lengthMm:
+              type: number
+              example: 65.5
+            widthMm:
+              type: number
+              example: 24.0
+            heightMm:
+              type: number
+              example: 18.0
+            notes:
+              type: string
+              example: "Inner opening diameter: 8 mm"
+        uploadedImages:
+          type: array
+          items:
+            type: string
+            format: uri
+        preferredMaterialId:
+          type: string
+          format: uuid
+        preferredColor:
+          type: string
+          example: "#000000"
+        quotedPrice:
+          type: number
+          format: float
+          nullable: true
+        estimatedDays:
+          type: integer
+          nullable: true
+        status:
+          type: string
+          enum: [PENDING_REVIEW, QUOTED, APPROVED_BY_USER, DESIGNING, REJECTED]
+          example: PENDING_REVIEW
+        createdAt:
+          type: string
+          format: date-time
+
+    OrderStatus:
+      type: string
+      enum:
+        - PENDING_PAYMENT
+        - CONFIRMED
+        - DESIGN_IN_PROGRESS
+        - PRINTING
+        - QUALITY_CHECK
+        - OUT_FOR_DELIVERY
+        - DELIVERED
+        - CANCELLED
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orderNumber:
+          type: string
+          example: "ORD-2026-1042"
+        userId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        totalAmount:
+          type: number
+          format: float
+          example: 15.00
+        estimatedDeliveryDate:
+          type: string
+          format: date
+        shippingAddress:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              readyPartId:
+                type: string
+                format: uuid
+                nullable: true
+              customRequestId:
+                type: string
+                format: uuid
+                nullable: true
+              materialId:
+                type: string
+                format: uuid
+              color:
+                type: string
+              quantity:
+                type: integer
+                example: 1
+              unitPrice:
+                type: number
+        trackingHistory:
+          type: array
+          items:
+            type: object
+            properties:
+              status:
+                $ref: '#/components/schemas/OrderStatus'
+              note:
+                type: string
+              timestamp:
+                type: string
+                format: date-time
+
+paths:
+  # ==================== AUTH ====================
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Create a customer account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fullName, email, phone, password]
+              properties:
+                fullName:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                phone:
+                  type: string
+                password:
+                  type: string
+                  minLength: 8
+                role:
+                  type: string
+                  enum: [CUSTOMER]
+                  default: CUSTOMER
+                  description: Admin accounts are assigned by an administrator and cannot be self-registered.
+      responses:
+        '201':
+          description: The account was created and an OTP verification code was sent to the registered email address.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/verify-otp:
+    post:
+      tags: [Auth]
+      summary: Verify the registered email address using an OTP code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, otp]
+              properties:
+                email:
+                  type: string
+                  format: email
+                otp:
+                  type: string
+                  pattern: '^\d{6}$'
+                  example: "482910"
+      responses:
+        '200':
+          description: Account activated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Email verified successfully
+        '400':
+          description: Invalid or expired OTP
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/resend-otp:
+    post:
+      tags: [Auth]
+      summary: Resend a new OTP to an unverified email address
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+      responses:
+        '200':
+          description: A new OTP was generated and sent to the email address.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: A new OTP has been sent to your email
+        '400':
+          description: Email is already verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: The verification email could not be sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Sign in and create a server-side session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful; the server sets the session cookie.
+          headers:
+            Set-Cookie:
+              description: HttpOnly session cookie used to authenticate subsequent requests.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid login credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: End the current session
+      security:
+        - SessionCookie: []
+      responses:
+        '204':
+          description: Session ended and the session cookie cleared.
+          headers:
+            Set-Cookie:
+              description: Clears the session cookie.
+              schema:
+                type: string
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Retrieve the current user and permissions
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: User data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  # ==================== MATERIALS ====================
+  /materials:
+    get:
+      tags: [Materials & Colors]
+      summary: List 3D-printing materials (rigid, flexible, heat-resistant) and colors
+      responses:
+        '200':
+          description: List of available materials
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Material'
+
+  # ==================== CATALOG (READY PARTS) ====================
+  /parts:
+    get:
+      tags: [Catalog (Ready Parts)]
+      summary: Search and filter the ready-parts catalog
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [HANDLES, BUTTONS, BASES, COVERS, OTHER]
+        - name: brand
+          in: query
+          schema:
+            type: string
+          description: Search by device brand name (for example, LG)
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of ready parts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReadyPart'
+
+    post:
+      tags: [Catalog (Ready Parts)]
+      summary: Add a new part to the catalog (Admin only)
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReadyPart'
+      responses:
+        '201':
+          description: Part added successfully
+
+  /parts/{partId}:
+    get:
+      tags: [Catalog (Ready Parts)]
+      summary: View ready-part details and calculate the instant price by material and quantity
+      parameters:
+        - name: partId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: materialId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: quantity
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: Part details and calculated price
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadyPart'
+
+  # ==================== CUSTOM & BROKEN PARTS ====================
+  /custom-requests/measurement-guide:
+    get:
+      tags: [Custom & Broken Parts]
+      summary: Measurement assistant - instructions and illustrative images for accurately photographing and measuring a broken part
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: Part type (handle, button, base)
+      responses:
+        '200':
+          description: Recommended photographing and measurement steps
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tips:
+                    type: array
+                    items:
+                      type: string
+                    example: ["Place a coin or ruler next to the part as a measurement reference", "Take a top-down photo and a side photo"]
+                  referenceImageUrl:
+                    type: string
+                    format: uri
+
+  /custom-requests:
+    post:
+      tags: [Custom & Broken Parts]
+      summary: Submit a broken-part photo with measurements or request "Design a Part for Me" from a sketch or idea
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [requestType, description, preferredMaterialId, preferredColor]
+              properties:
+                requestType:
+                  type: string
+                  enum: [BROKEN_PART_SCAN, DESIGN_FROM_IDEA]
+                deviceCategory:
+                  type: string
+                description:
+                  type: string
+                lengthMm:
+                  type: number
+                widthMm:
+                  type: number
+                heightMm:
+                  type: number
+                notes:
+                  type: string
+                preferredMaterialId:
+                  type: string
+                  format: uuid
+                preferredColor:
+                  type: string
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '201':
+          description: Request received successfully; dimensions and pricing are being determined
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomPartRequest'
+
+    get:
+      tags: [Custom & Broken Parts]
+      summary: View custom-part requests (the current user's requests or all requests for an administrator)
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: List of custom requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustomPartRequest'
+
+  /custom-requests/{requestId}/quote:
+    patch:
+      tags: [Custom & Broken Parts]
+      summary: Send a price quote and lead time to the customer (Admin only)
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quotedPrice, estimatedDays]
+              properties:
+                quotedPrice:
+                  type: number
+                  example: 18.5
+                estimatedDays:
+                  type: integer
+                  example: 3
+                adminNotes:
+                  type: string
+      responses:
+        '200':
+          description: The quote was updated and the customer was notified
+
+  # ==================== ORDERS & TRACKING ====================
+  /orders:
+    post:
+      tags: [Orders & Tracking]
+      summary: Create a new printing order (from the ready-parts catalog or after approving a custom quote)
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [shippingAddress, items]
+              properties:
+                shippingAddress:
+                  type: string
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      readyPartId:
+                        type: string
+                        format: uuid
+                      materialId:
+                        type: string
+                        format: uuid
+                      color:
+                        type: string
+                      quantity:
+                        type: integer
+                        default: 1
+      responses:
+        '201':
+          description: Order created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+
+    get:
+      tags: [Orders & Tracking]
+      summary: View order history
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+
+  /orders/{orderId}:
+    get:
+      tags: [Orders & Tracking]
+      summary: Track the order status in detail (from printing to delivery)
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Order details and tracking history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+
+  /orders/{orderId}/status:
+    patch:
+      tags: [Orders & Tracking]
+      summary: Update the order stage (design, printing, quality check, delivery, delivered) - Admin only
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  $ref: '#/components/schemas/OrderStatus'
+                note:
+                  type: string
+                  example: "3D printing started using ABS material"
+      responses:
+        '200':
+          description: Order status updated successfully
