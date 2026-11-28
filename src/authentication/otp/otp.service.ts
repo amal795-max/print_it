@@ -83,7 +83,11 @@ export class OtpService {
       throw new BadRequestException('Invalid or expired OTP');
     }
 
-    await this.usersService.markVerified(user.id);
+    const consumed = await this.usersService.consumeOtp(user.id, user.otp);
+    if (!consumed) {
+      throw new BadRequestException('Invalid or expired OTP');
+    }
+
     this.logger.log(`Email verified for user: ${user.id}`);
     return { message: 'Email verified successfully' };
   }

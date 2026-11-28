@@ -6,8 +6,9 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
-import { Repository } from 'typeorm';
+import { Raw, Repository } from 'typeorm';
 import { RegisterDto } from './dto/register.dto.js';
+import { UserRole } from './roles/user-role.enum.js';
 import { User } from './user.entity.js';
 
 @Injectable()
@@ -38,7 +39,7 @@ export class UsersService {
       email: dto.email,
       phone: dto.phone,
       passwordHash,
-      role: dto.role,
+      role: UserRole.CUSTOMER,
       isVerified: false,
     });
 
@@ -77,14 +78,20 @@ export class UsersService {
   }
 
   /**
-   * Marks the user verified and clears the OTP.
+   * Consumes the OTP only if it is still current and unexpired.
    */
-  async markVerified(userId: string): Promise<void> {
-    await this.userRepository.update(userId, {
-      isVerified: true,
-      otp: null,
-      otpExpiresAt: null,
-    });
+  async consumeOtp(userId: string, expectedOtpHash: string): Promise<boolean> {
+    const result = await this.userRepository.update(
+      {
+        id: userId,
+        otp: expectedOtpHash,
+        otpExpiresAt: Raw((column) => `${column} > clock_timestamp()`),
+        isVerified: false,
+      },
+      { isVerified: true, otp: null, otpExpiresAt: null },
+    );
+
+    return result.affected === 1;
   }
 
   /**

@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { UserRole } from './roles/user-role.enum.js';
 import { AuthenticationController } from './authentication.controller.js';
 import type { AuthenticationService } from './authentication.service.js';
 
@@ -30,7 +29,6 @@ describe('AuthenticationController', () => {
       email: 'user@example.com',
       phone: '+14155552671',
       password: 'Str0ng!Pass',
-      role: UserRole.CUSTOMER,
     };
     authenticationService.register.mockResolvedValue({
       message: 'Registration successful. An OTP has been sent to your email.',
