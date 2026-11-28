@@ -62,7 +62,6 @@ describe('AuthenticationService', () => {
       email: sampleUser.email,
       phone: sampleUser.phone,
       password: 'Str0ng!Pass',
-      role: UserRole.CUSTOMER,
     };
     const result = await service.register(dto);
 

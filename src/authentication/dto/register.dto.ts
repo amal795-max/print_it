@@ -1,11 +1,9 @@
 import {
   IsEmail,
-  IsEnum,
   IsString,
   Matches,
   MinLength,
 } from 'class-validator';
-import { UserRole } from '../roles/user-role.enum.js';
 
 const PASSWORD_PATTERN =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
@@ -28,7 +26,4 @@ export class RegisterDto {
       'Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character',
   })
   password!: string;
-
-  @IsEnum(UserRole, { message: 'Role must be CUSTOMER or ADMIN' })
-  role!: UserRole;
 }
